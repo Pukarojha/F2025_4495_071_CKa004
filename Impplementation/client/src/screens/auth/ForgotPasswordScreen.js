@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import WDButton from "../../components/ui/WDButton";
-import { colors, spacing, type, radius } from "../../theme/tokens";
+import WDInput from "../../components/ui/WDInput";
+import { colors, spacing, type, radius, shadows } from "../../theme/tokens";
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -16,7 +17,7 @@ export default function ForgotPasswordScreen({ navigation }) {
   return (
     <View style={styles.root}>
       <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color="#000" />
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
       </Pressable>
 
       <Text style={styles.h1}>Forgot password?</Text>
@@ -24,15 +25,13 @@ export default function ForgotPasswordScreen({ navigation }) {
         Don't worry! It happens. Please enter the email associated with your account.
       </Text>
 
-      <Text style={styles.label}>Email address</Text>
-      <TextInput
+      <WDInput
+        label="Email address"
         placeholder="Enter your email address"
-        placeholderTextColor={colors.muted}
-        style={styles.input}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
-        autoCapitalize="none"
+        style={styles.inputField}
       />
 
       <WDButton
@@ -41,9 +40,11 @@ export default function ForgotPasswordScreen({ navigation }) {
         style={styles.sendBtn}
       />
 
-      <Text style={styles.remember} onPress={() => navigation.navigate("SignIn")}>
-        Remember password? <Text style={styles.loginLink}>Log in</Text>
-      </Text>
+      <Pressable onPress={() => navigation.navigate("SignIn")}>
+        <Text style={styles.remember}>
+          Remember password? <Text style={styles.loginLink}>Log in</Text>
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -51,17 +52,19 @@ export default function ForgotPasswordScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#fff",
-    padding: spacing.lg
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl
   },
   backBtn: {
     marginTop: spacing.md,
     marginBottom: spacing.lg,
-    alignSelf: "flex-start"
+    alignSelf: "flex-start",
+    padding: spacing.xs
   },
   h1: {
     ...type.h1,
-    color: "#000",
+    color: colors.text,
     marginBottom: spacing.sm
   },
   desc: {
@@ -70,23 +73,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     lineHeight: 22
   },
-  label: {
-    ...type.body,
-    color: "#000",
-    marginBottom: spacing.xs
-  },
-  input: {
-    backgroundColor: "#fff",
-    color: "#000",
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    paddingHorizontal: spacing.md,
-    height: 48,
+  inputField: {
     marginBottom: spacing.lg
   },
   sendBtn: {
-    marginBottom: spacing.lg
+    marginBottom: spacing.xl,
+    ...shadows.main
   },
   remember: {
     ...type.body,
@@ -95,6 +87,6 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontWeight: "600",
-    color: "#000"
+    color: colors.text
   }
 });
