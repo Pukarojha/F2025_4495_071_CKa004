@@ -1,19 +1,17 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 import WDButton from "../../components/ui/WDButton";
-import { colors, spacing, type } from "../../theme/tokens";
+import { colors, spacing, shadows } from "../../theme/tokens";
 
 export default function SplashScreen({ navigation }) {
   return (
     <View style={styles.root}>
       <View style={styles.logoContainer}>
-        <View style={styles.logoIcon}>
-          <Text style={styles.cloudEmoji}>☁️</Text>
-          <Text style={styles.carEmoji}>🚗</Text>
-          <Text style={styles.rainEmoji}>💧💧💧</Text>
-        </View>
-        <Text style={styles.logoText}>Weather</Text>
-        <Text style={styles.logoTextSecondary}>Driver</Text>
+        <Image
+          source={require('../../../assets/splash-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.buttonContainer}>
@@ -35,7 +33,7 @@ export default function SplashScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: colors.surface,
     padding: spacing.lg,
     justifyContent: "space-between"
   },
@@ -44,41 +42,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  logoIcon: {
-    alignItems: "center",
-    marginBottom: spacing.lg
-  },
-  cloudEmoji: {
-    fontSize: 60,
-    color: colors.primary
-  },
-  carEmoji: {
-    fontSize: 40,
-    marginTop: -10
-  },
-  rainEmoji: {
-    fontSize: 20,
-    marginTop: -5
-  },
-  logoText: {
-    ...type.h1,
-    fontSize: 36,
-    color: colors.primary,
-    fontWeight: "700"
-  },
-  logoTextSecondary: {
-    ...type.h1,
-    fontSize: 36,
-    color: "#D4A574",
-    fontWeight: "700",
-    marginTop: -8
+  logo: {
+    width: 280,
+    height: 280,
+    maxWidth: '80%',
+    maxHeight: '50%'
   },
   buttonContainer: {
     gap: spacing.md,
     paddingBottom: spacing.xl
   },
   signInBtn: {
-    backgroundColor: colors.primary
+    backgroundColor: colors.primary,
+    ...shadows.main
   },
   createAccountBtn: {
     backgroundColor: "transparent",

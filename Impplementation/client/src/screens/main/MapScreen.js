@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { View, ActivityIndicator, StyleSheet, Text, Pressable, TextInput, Modal } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 import * as Location from "expo-location";
@@ -17,6 +17,7 @@ export default function MapScreen({ navigation }) {
   const [searchText, setSearchText] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showRouteModal, setShowRouteModal] = useState(false);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -51,11 +52,13 @@ export default function MapScreen({ navigation }) {
     <View style={styles.container}>
       {region ? (
         <MapView
+          ref={mapRef}
           style={StyleSheet.absoluteFill}
           initialRegion={region}
           customMapStyle={lightMapStyle}
           showsUserLocation={true}
-          followsUserLocation={true}>
+          followsUserLocation={false}
+          showsMyLocationButton={false}>
           {SAMPLE.zones.map(z => (
             <Polygon key={z.id}
               coordinates={z.polygon.map(p => ({ latitude: p.lat, longitude: p.lon }))}
@@ -79,55 +82,22 @@ export default function MapScreen({ navigation }) {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+        <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search')}>
           <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search here"
-            placeholderTextColor="#666"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
+          <View style={styles.searchContent}>
+            <Text style={styles.searchPlaceholder}>Search here</Text>
+          </View>
           <Pressable style={styles.voiceButton}>
             <Ionicons name="mic" size={20} color="#666" />
           </Pressable>
-          <Pressable style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
-            <Ionicons name="options" size={20} color="#666" />
+          <Pressable style={styles.profileAvatarButton} onPress={() => setShowProfileMenu(true)}>
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>CH</Text>
+            </View>
           </Pressable>
-        </View>
-
-        {/* Filter Pills */}
-        {showFilters && (
-          <View style={styles.filterContainer}>
-            <Pressable style={styles.filterPill}>
-              <Ionicons name="bookmark" size={16} color={colors.primary} />
-              <Text style={styles.filterText}>Saved</Text>
-            </Pressable>
-            <Pressable style={styles.filterPill}>
-              <Ionicons name="car" size={16} color={colors.primary} />
-              <Text style={styles.filterText}>Gas</Text>
-            </Pressable>
-            <Pressable style={styles.filterPill}>
-              <Ionicons name="restaurant" size={16} color={colors.primary} />
-              <Text style={styles.filterText}>Food</Text>
-            </Pressable>
-            <Pressable style={styles.filterPill}>
-              <Ionicons name="bed" size={16} color={colors.primary} />
-              <Text style={styles.filterText}>Hotels</Text>
-            </Pressable>
-          </View>
-        )}
+        </Pressable>
       </View>
 
-      {/* Profile Avatar */}
-      <Pressable
-        style={styles.profileButton}
-        onPress={() => setShowProfileMenu(true)}
-      >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>CH</Text>
-        </View>
-      </Pressable>
 
       {/* Floating Route Button */}
       <Pressable
@@ -137,67 +107,130 @@ export default function MapScreen({ navigation }) {
         <Ionicons name="navigate" size={24} color="#fff" />
       </Pressable>
 
+      {/* Custom Location Button */}
+      <Pressable
+        style={styles.customLocationButton}
+        onPress={async () => {
+          try {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+
+            const newRegion = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01
+            };
+
+            // Update state
+            setRegion(newRegion);
+
+            // Animate map to new location
+            if (mapRef.current) {
+              mapRef.current.animateToRegion(newRegion, 1000);
+            }
+          } catch (error) {
+            console.log('Error getting location:', error);
+            // Request permission if denied
+            try {
+              const { status } = await Location.requestForegroundPermissionsAsync();
+              if (status === 'granted') {
+                // Retry getting location
+                const location = await Location.getCurrentPositionAsync({
+                  accuracy: Location.Accuracy.High,
+                });
+
+                const newRegion = {
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01
+                };
+
+                setRegion(newRegion);
+                if (mapRef.current) {
+                  mapRef.current.animateToRegion(newRegion, 1000);
+                }
+              }
+            } catch (permissionError) {
+              console.log('Permission error:', permissionError);
+            }
+          }
+        }}
+      >
+        <Ionicons name="locate" size={18} color="#666" />
+      </Pressable>
+
+
       {/* Profile Menu Modal */}
       <Modal
         visible={showProfileMenu}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowProfileMenu(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowProfileMenu(false)}
-        >
-          <View style={styles.profileMenu}>
-            <View style={styles.profileHeader}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>CH</Text>
+        <View style={styles.profileModalContainer}>
+          <View style={styles.profileModal}>
+            {/* Close Button */}
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setShowProfileMenu(false)}
+            >
+              <Ionicons name="close" size={24} color="#666" />
+            </Pressable>
+
+            {/* Profile Header */}
+            <View style={styles.profileModalHeader}>
+              <View style={styles.profileImageContainer}>
+                <View style={styles.profileImage}>
+                  <Text style={styles.profileImageText}>CH</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.profileName}>Cheguevaran</Text>
-                <Text style={styles.profileEmail}>Cheguevaran2@gmail.com</Text>
-              </View>
+              <Text style={styles.profileModalName}>Cheguevaran</Text>
+              <Text style={styles.profileModalEmail}>Cheguevaran2@gmail.com</Text>
             </View>
 
-            <View style={styles.menuItems}>
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Plan a drive")}>
-                <Ionicons name="map" size={20} color="#666" />
-                <Text style={styles.menuText}>Plan a drive</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+            {/* Menu Items */}
+            <View style={styles.profileMenuItems}>
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Plan a drive")}>
+                <Ionicons name="car" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Plan a drive</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Inbox")}>
-                <Ionicons name="mail" size={20} color="#666" />
-                <Text style={styles.menuText}>Inbox</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Inbox")}>
+                <Ionicons name="mail" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Inbox</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Settings")}>
-                <Ionicons name="settings" size={20} color="#666" />
-                <Text style={styles.menuText}>Settings</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Settings")}>
+                <Ionicons name="settings" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Settings</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Notification")}>
-                <Ionicons name="notifications" size={20} color="#666" />
-                <Text style={styles.menuText}>Notification</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Notification")}>
+                <Ionicons name="notifications" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Notification</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Help and Support")}>
-                <Ionicons name="help-circle" size={20} color="#666" />
-                <Text style={styles.menuText}>Help and Support</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Help and Support")}>
+                <Ionicons name="help-circle" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Help and Support</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
 
-              <Pressable style={styles.menuItem} onPress={() => handleProfileMenuPress("Logout")}>
-                <Ionicons name="log-out" size={20} color="#666" />
-                <Text style={styles.menuText}>Logout</Text>
-                <Ionicons name="chevron-forward" size={16} color="#999" />
+              <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Logout")}>
+                <Ionicons name="log-out" size={24} color="#666" />
+                <Text style={styles.profileMenuText}>Logout</Text>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
             </View>
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       {/* Route Modal */}
@@ -238,51 +271,38 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
-  },
-  searchIcon: {
-    marginRight: spacing.sm
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333"
-  },
-  voiceButton: {
-    marginLeft: spacing.sm,
-    padding: 4
-  },
-  filterButton: {
-    marginLeft: spacing.sm,
-    padding: 4
-  },
-  filterContainer: {
-    flexDirection: "row",
-    marginTop: spacing.sm,
+    elevation: 3,
     gap: spacing.sm
   },
-  filterPill: {
-    flexDirection: "row",
+  searchIcon: {
+    marginRight: spacing.xs
+  },
+  searchContent: {
+    flex: 1,
+    justifyContent: "center"
+  },
+  searchPlaceholder: {
+    fontSize: 16,
+    color: "#666"
+  },
+  voiceButton: {
+    padding: 4
+  },
+  profileAvatarButton: {
+    padding: 2
+  },
+  profileAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    gap: 4
+    justifyContent: "center"
   },
-  filterText: {
+  profileAvatarText: {
+    color: "#fff",
     fontSize: 14,
-    color: "#333"
-  },
-  profileButton: {
-    position: "absolute",
-    top: 50,
-    right: spacing.md
+    fontWeight: "600"
   },
   routeButton: {
     position: "absolute",
@@ -300,6 +320,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4
   },
+  customLocationButton: {
+    position: "absolute",
+    bottom: 30,
+    right: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2
+  },
   avatar: {
     width: 40,
     height: 40,
@@ -313,46 +349,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600"
   },
-  modalOverlay: {
+  profileModalContainer: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center"
+    justifyContent: "flex-end"
   },
-  profileMenu: {
+  profileModal: {
     backgroundColor: "#fff",
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    margin: spacing.lg,
-    minWidth: 300
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    minHeight: "60%"
   },
-  profileHeader: {
+  closeButton: {
+    alignSelf: "flex-end",
+    padding: spacing.xs,
+    marginBottom: spacing.md
+  },
+  profileModalHeader: {
+    alignItems: "center",
+    marginBottom: spacing.xl
+  },
+  profileImageContainer: {
+    marginBottom: spacing.md
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  profileImageText: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "600"
+  },
+  profileModalName: {
+    ...type.h2,
+    color: colors.text,
+    marginBottom: spacing.xs
+  },
+  profileModalEmail: {
+    ...type.body,
+    color: colors.muted
+  },
+  profileMenuItems: {
+    gap: spacing.xs
+  },
+  profileMenuItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.lg,
-    gap: spacing.md
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border
   },
-  profileName: {
-    ...type.h3,
-    color: "#333"
-  },
-  profileEmail: {
-    ...type.caption,
-    color: "#666"
-  },
-  menuItems: {
-    gap: spacing.sm
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    gap: spacing.md
-  },
-  menuText: {
+  profileMenuText: {
     flex: 1,
     ...type.body,
-    color: "#333"
+    color: colors.text,
+    fontWeight: "500"
   }
 });
 
