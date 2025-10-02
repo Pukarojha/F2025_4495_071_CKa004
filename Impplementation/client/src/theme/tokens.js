@@ -36,7 +36,21 @@ export const colors = {
 
   // Chip and component colors
   chip: "#F0F0F0",
-  chipActive: "#E0F7FA"
+  chipActive: "#E0F7FA",
+
+  
+    background: '#F7F8FA',
+    card: '#FFFFFF',
+    text: '#0F172A',
+    subtext: '#64748B',
+    primary: '#2563EB',
+    border: '#E2E8F0',
+    success: '#16A34A',
+    danger: '#DC2626',
+ 
+  radii: { xl:16, lg:12, md:10, sm:8 },
+  spacing: (n)=> n*8,
+  fontSizes: { xs:12, sm:13, base:14, md:16, lg:20, xl:24 }
 };
 
 export const severityColors = {

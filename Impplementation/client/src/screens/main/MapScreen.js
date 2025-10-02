@@ -34,14 +34,26 @@ export default function MapScreen({ navigation }) {
   }, []);
 
   const handleProfileMenuPress = (option) => {
-    setShowProfileMenu(false);
-    if (option === "Logout") {
-      navigation.replace("SignIn");
-    } else if (option === "Plan a drive") {
-      setShowRouteModal(true);
-    }
-    // Handle other menu options
-  };
+  setShowProfileMenu(false);
+  
+  if (option === "Logout") {
+    // Use getParent() to access the root navigator
+    navigation.getParent()?.replace("SignIn");
+  } else if (option === "Plan a drive") {
+    setShowRouteModal(true);
+  } else if (option === "Settings") {
+    // Navigate to Settings in Root Stack, not Tab Navigator
+    navigation.getParent()?.navigate("Settings");
+  } else if (option === "Notification") {
+    // Navigate to NotificationSettings in Root Stack
+    navigation.getParent()?.navigate("NotificationSettings");
+  } else if (option === "Inbox") {
+    console.log("Inbox - Coming soon");
+  } else if (option === "Help and Support") {
+    console.log("Help and Support - Coming soon");
+  }
+};
+
 
   const handleMarkerPress = (alert) => {
     // Show route when user taps on a marker
