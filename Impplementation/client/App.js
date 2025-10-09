@@ -19,6 +19,8 @@ import MapScreen from "./src/screens/main/MapScreen";
 import AlertsScreen from "./src/screens/main/AlertScreen";
 import SearchScreen from "./src/screens/main/SearchScreen";
 import SettingsMenuScreen from "./src/screens/main/SettingsMenuScreen";
+import GasStationScreen from "./src/screens/settings/GasStationScreen";
+import PreferredBrandScreen from "./src/screens/settings/PreferredBrandScreen";
 
 import { colors } from "./src/theme/tokens";
 
@@ -75,6 +77,8 @@ export default function App() {
           <RootStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           <RootStack.Screen name="PasswordChanged" component={PasswordChangedScreen} />
           <RootStack.Screen name="Main" component={MainTabs} />
+          <RootStack.Screen name="GasStation" component={GasStationScreen} />
+          <RootStack.Screen name="PreferredBrand" component={PreferredBrandScreen} />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

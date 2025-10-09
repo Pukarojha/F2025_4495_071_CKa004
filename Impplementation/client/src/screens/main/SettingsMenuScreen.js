@@ -24,7 +24,7 @@ export default function SettingsMenuScreen({ navigation }) {
       section: "Driving Preferences",
       items: [
         { icon: "car-outline", label: "Tolls and Express Lane Passes", route: "TollPasses" },
-        { icon: "water-outline", label: "Gas Stations", route: "GasStations" },
+        { icon: "water-outline", label: "Gas Stations", route: "GasStation" },
         { icon: "speedometer-outline", label: "Speedometer", route: "Speedometer" },
       ]
     }
@@ -67,8 +67,7 @@ export default function SettingsMenuScreen({ navigation }) {
                   onPress={() => {
                     // Navigate to specific settings screen
                     if (item.route) {
-                      // navigation.navigate(item.route);
-                      console.log(`Navigate to ${item.route}`);
+                      navigation.navigate(item.route);
                     }
                   }}
                 >
