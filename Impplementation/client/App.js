@@ -18,7 +18,7 @@ import PasswordChangedScreen from "./src/screens/auth/PasswordChangedScreen";
 import MapScreen from "./src/screens/main/MapScreen";
 import AlertsScreen from "./src/screens/main/AlertScreen";
 import SearchScreen from "./src/screens/main/SearchScreen";
-import SettingsScreen from "./src/screens/main/SettingsScreen";
+import SettingsMenuScreen from "./src/screens/main/SettingsMenuScreen";
 
 import { colors } from "./src/theme/tokens";
 
@@ -43,7 +43,7 @@ function MainTabs() {
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Alerts" component={AlertsScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsMenuScreen} />
     </Tab.Navigator>
   );
 }

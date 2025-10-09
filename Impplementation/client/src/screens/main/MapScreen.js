@@ -39,6 +39,8 @@ export default function MapScreen({ navigation }) {
       navigation.replace("SignIn");
     } else if (option === "Plan a drive") {
       setShowRouteModal(true);
+    } else if (option === "Settings") {
+      navigation.navigate("Settings");
     }
     // Handle other menu options
   };
