@@ -1,64 +1,99 @@
 import React from "react";
 import { View, StyleSheet, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import WDButton from "../../components/ui/WDButton";
-import { colors, spacing, shadows } from "../../theme/tokens";
+import { colors } from "../../theme/tokens";
 
 export default function SplashScreen({ navigation }) {
   return (
-    <View style={styles.root}>
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../../../assets/splash-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <View style={styles.container}>
+        {/* Logo Section */}
+        <View style={styles.logoContainer}>
+          {/* Cloud Car Icon - Much smaller */}
+          <Image
+            source={require('../../../assets/cloudlogo.png')}
+            style={styles.icon}
+            resizeMode="contain"
+          />
+          
+          {/* Weather Driver Text - Smaller */}
+          <Image
+            source={require('../../../assets/weather.png')}
+            style={styles.logoText}
+            resizeMode="contain"
+          />
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <WDButton
-          label="Sign In"
-          onPress={() => navigation.navigate("SignIn")}
-          style={styles.signInBtn}
-        />
-        <WDButton
-          label="Create account"
-          onPress={() => navigation.navigate("SignUp")}
-          style={styles.createAccountBtn}
-        />
+        {/* Buttons */}
+        <View style={styles.buttonContainer}>
+          <WDButton
+            label="Sign In"
+            onPress={() => navigation.navigate("SignIn")}
+            style={styles.signInBtn}
+            textStyle={styles.signInBtnText}
+          />
+          <WDButton
+            label="Create account"
+            onPress={() => navigation.navigate("SignUp")}
+            style={styles.createAccountBtn}
+            textStyle={styles.createAccountBtnText}
+          />
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    justifyContent: "space-between"
+    backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
   },
   logoContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    gap: 1,
+    paddingVertical: 40,
   },
-  logo: {
-    width: 280,
-    height: 280,
-    maxWidth: '80%',
-    maxHeight: '50%'
+  icon: {
+    width: 300,           // Smaller icon
+    height: 200,
+  },
+  logoText: {
+    width: 450,           // Smaller text logo
+    height: 200,
   },
   buttonContainer: {
-    gap: spacing.md,
-    paddingBottom: spacing.xl
+    gap: 16,
+    paddingBottom: 40,
   },
   signInBtn: {
-    backgroundColor: colors.primary,
-    ...shadows.main
+    backgroundColor: "#00BCD4",
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  signInBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   createAccountBtn: {
     backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.border
-  }
+    borderWidth: 1.5,
+    borderColor: "#00BCD4",
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  createAccountBtnText: {
+    color: "#00BCD4",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
