@@ -12,14 +12,14 @@ export default function SplashScreen({ navigation }) {
         <View style={styles.logoContainer}>
           {/* Cloud Car Icon - Much smaller */}
           <Image
-            source={require('../../../assets/WeatherDriverlogo.png')}
+            source={require('../../../assets/cloudlogo.png')}
             style={styles.icon}
             resizeMode="contain"
           />
           
           {/* Weather Driver Text - Smaller */}
           <Image
-            source={require('../../../assets/WeatherDriver.png')}
+            source={require('../../../assets/letterlogo.png')}
             style={styles.logoText}
             resizeMode="contain"
           />
