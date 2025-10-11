@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Switch } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, type, radius } from "../../theme/tokens";
 
@@ -45,49 +46,52 @@ export default function SpeedometerScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </Pressable>
         <Text style={styles.headerTitle}>Speedometer</Text>
         <Pressable
           style={styles.closeButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close" size={28} color="#000" />
         </Pressable>
       </View>
 
-      {/* Settings List */}
+      {/* Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Speed Limit Section Header */}
+        {/* Section Header */}
         <Text style={styles.sectionHeader}>Speed limit</Text>
 
-        {/* Speed Unit Selector */}
-        <View style={styles.unitSelectorContainer}>
+        {/* Speed Unit Cards */}
+        <View style={styles.cardsContainer}>
           {speedUnits.map((unit) => (
             <Pressable
               key={unit.id}
               style={[
-                styles.unitButton,
-                selectedUnit === unit.label && styles.unitButtonActive
+                styles.unitCard,
+                selectedUnit === unit.label && styles.unitCardSelected
               ]}
               onPress={() => handleUnitSelect(unit.label)}
             >
               <Text style={[
-                styles.unitButtonText,
-                selectedUnit === unit.label && styles.unitButtonTextActive
+                styles.unitCardText,
+                selectedUnit === unit.label && styles.unitCardTextSelected
               ]}>
                 {unit.label}
               </Text>
               {unit.isDefault && selectedUnit === unit.label && (
-                <View style={styles.defaultBadge}>
-                  <Ionicons name="checkmark" size={16} color={colors.primary} />
+                <View style={styles.defaultBadgeContainer}>
+                  <Text style={styles.defaultBadgeText}>Default</Text>
+                  <View style={styles.checkmarkCircle}>
+                    <Ionicons name="checkmark" size={14} color="#00BCD4" />
+                  </View>
                 </View>
               )}
             </Pressable>
@@ -96,47 +100,49 @@ export default function SpeedometerScreen({ navigation }) {
 
         {/* Show speed limit */}
         <Pressable
-          style={styles.settingItem}
+          style={styles.settingCard}
           onPress={() => setShowSpeedLimitModal(true)}
         >
           <Text style={styles.settingLabel}>Show speed limit</Text>
           <View style={styles.settingValueContainer}>
             <Text style={styles.settingValue}>{speedLimit}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            <Ionicons name="chevron-forward" size={20} color="#999" />
           </View>
         </Pressable>
 
         {/* Speeding threshold */}
         <Pressable
-          style={styles.settingItem}
+          style={styles.settingCard}
           onPress={() => setShowThresholdModal(true)}
         >
           <Text style={styles.settingLabel}>Speeding threshold</Text>
           <View style={styles.settingValueContainer}>
             <Text style={styles.settingValue}>{threshold}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            <Ionicons name="chevron-forward" size={20} color="#999" />
           </View>
         </Pressable>
 
         {/* Show on map */}
-        <View style={styles.settingItem}>
+        <View style={styles.toggleCard}>
           <Text style={styles.settingLabel}>Show on map</Text>
           <Switch
             value={showOnMap}
             onValueChange={setShowOnMap}
-            trackColor={{ false: colors.border, true: colors.primary + "80" }}
-            thumbColor={showOnMap ? colors.primary : colors.muted}
+            trackColor={{ false: "#E0E0E0", true: "#80DEEA" }}
+            thumbColor={showOnMap ? "#00BCD4" : "#f4f3f4"}
+            ios_backgroundColor="#E0E0E0"
           />
         </View>
 
         {/* Alert when speeding */}
-        <View style={styles.settingItem}>
+        <View style={styles.toggleCard}>
           <Text style={styles.settingLabel}>Alert when speeding</Text>
           <Switch
             value={alertWhenSpeeding}
             onValueChange={setAlertWhenSpeeding}
-            trackColor={{ false: colors.border, true: colors.primary + "80" }}
-            thumbColor={alertWhenSpeeding ? colors.primary : colors.muted}
+            trackColor={{ false: "#E0E0E0", true: "#80DEEA" }}
+            thumbColor={alertWhenSpeeding ? "#00BCD4" : "#f4f3f4"}
+            ios_backgroundColor="#E0E0E0"
           />
         </View>
       </ScrollView>
@@ -150,24 +156,22 @@ export default function SpeedometerScreen({ navigation }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Pressable
                 style={styles.modalBackButton}
                 onPress={() => setShowSpeedLimitModal(false)}
               >
-                <Ionicons name="arrow-back" size={24} color={colors.text} />
+                <Ionicons name="arrow-back" size={24} color="#000" />
               </Pressable>
               <Text style={styles.modalTitle}>Show speed limit</Text>
               <Pressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowSpeedLimitModal(false)}
               >
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={28} color="#000" />
               </Pressable>
             </View>
 
-            {/* Speed Limit Options */}
             <ScrollView style={styles.modalScrollView}>
               {speedLimitOptions.map((option, index) => (
                 <Pressable
@@ -180,7 +184,7 @@ export default function SpeedometerScreen({ navigation }) {
                 >
                   <Text style={styles.optionLabel}>{option.label}</Text>
                   {speedLimit === option.label && (
-                    <Ionicons name="checkmark" size={24} color={colors.primary} />
+                    <Ionicons name="checkmark" size={24} color="#00BCD4" />
                   )}
                 </Pressable>
               ))}
@@ -198,24 +202,22 @@ export default function SpeedometerScreen({ navigation }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Pressable
                 style={styles.modalBackButton}
                 onPress={() => setShowThresholdModal(false)}
               >
-                <Ionicons name="arrow-back" size={24} color={colors.text} />
+                <Ionicons name="arrow-back" size={24} color="#000" />
               </Pressable>
               <Text style={styles.modalTitle}>Speeding threshold</Text>
               <Pressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowThresholdModal(false)}
               >
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={28} color="#000" />
               </Pressable>
             </View>
 
-            {/* Threshold Options */}
             <ScrollView style={styles.modalScrollView}>
               {thresholdOptions.map((option, index) => (
                 <Pressable
@@ -228,7 +230,7 @@ export default function SpeedometerScreen({ navigation }) {
                 >
                   <Text style={styles.optionLabel}>{option.label}</Text>
                   {threshold === option.label && (
-                    <Ionicons name="checkmark" size={24} color={colors.primary} />
+                    <Ionicons name="checkmark" size={24} color="#00BCD4" />
                   )}
                 </Pressable>
               ))}
@@ -236,25 +238,22 @@ export default function SpeedometerScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl + 20,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#F5F5F5",
   },
   backButton: {
     width: 40,
@@ -263,9 +262,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    ...type.h2,
-    color: colors.text,
+    fontSize: 20,
     fontWeight: "700",
+    color: "#000",
   },
   closeButton: {
     width: 40,
@@ -275,82 +274,104 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   sectionHeader: {
-    ...type.caption,
-    color: colors.muted,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.bg,
+    fontSize: 14,
+    color: "#999",
+    marginTop: 8,
+    marginBottom: 16,
+    marginLeft: 4,
   },
-  unitSelectorContainer: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    gap: spacing.sm,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+  cardsContainer: {
+    gap: 12,
+    marginBottom: 16,
   },
-  unitButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+  unitCard: {
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: spacing.xs,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: "transparent",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  unitButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + "10",
+  unitCardSelected: {
+    borderColor: "#00BCD4",
+    backgroundColor: "#fff",
   },
-  unitButtonText: {
-    ...type.body,
-    color: colors.text,
-    fontWeight: "400",
-  },
-  unitButtonTextActive: {
-    color: colors.primary,
+  unitCardText: {
+    fontSize: 16,
     fontWeight: "600",
+    color: "#000",
   },
-  defaultBadge: {
+  unitCardTextSelected: {
+    color: "#000",
+  },
+  defaultBadgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 8,
+  },
+  defaultBadgeText: {
+    fontSize: 13,
+    color: "#999",
+  },
+  checkmarkCircle: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#00BCD4",
   },
-  settingItem: {
+  settingCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg + 4,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   settingLabel: {
-    ...type.body,
-    color: colors.text,
-    fontWeight: "400",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#000",
   },
   settingValueContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: 4,
   },
   settingValue: {
-    ...type.body,
-    color: colors.muted,
-    fontWeight: "400",
+    fontSize: 15,
+    color: "#999",
   },
   modalOverlay: {
     flex: 1,
@@ -358,9 +379,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     minHeight: "40%",
     maxHeight: "60%",
   },
@@ -368,11 +389,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+    borderBottomColor: "#E0E0E0",
   },
   modalBackButton: {
     width: 40,
@@ -381,9 +401,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalTitle: {
-    ...type.h2,
-    color: colors.text,
+    fontSize: 18,
     fontWeight: "700",
+    color: "#000",
   },
   modalCloseButton: {
     width: 40,
@@ -398,18 +418,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg + 4,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+    borderBottomColor: "#E0E0E0",
   },
   optionItemLast: {
     borderBottomWidth: 0,
   },
   optionLabel: {
-    ...type.body,
-    color: colors.text,
-    fontWeight: "400",
+    fontSize: 16,
+    color: "#000",
   },
 });
