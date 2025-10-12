@@ -1,2 +1,0 @@
-This is the UI design for the project. The UI is designed from figma and the link is as below:
-https://www.figma.com/design/pkZP0qGH9ltKgVPdDbtI6n/Weather-driver---Shilling-JULIET?node-id=0-1&t=DnXa82dFiMh13iDm-1
