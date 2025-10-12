@@ -21,6 +21,7 @@ import SearchScreen from "./src/screens/main/SearchScreen";
 import SettingsMenuScreen from "./src/screens/main/SettingsMenuScreen";
 import GasStationScreen from "./src/screens/settings/GasStationScreen";
 import PreferredBrandScreen from "./src/screens/settings/PreferredBrandScreen";
+import SpeedometerScreen from "./src/screens/settings/SpeedometerScreen";
 
 import { colors } from "./src/theme/tokens";
 
@@ -79,6 +80,7 @@ export default function App() {
           <RootStack.Screen name="Main" component={MainTabs} />
           <RootStack.Screen name="GasStation" component={GasStationScreen} />
           <RootStack.Screen name="PreferredBrand" component={PreferredBrandScreen} />
+          <RootStack.Screen name="Speedometer" component={SpeedometerScreen} />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>
