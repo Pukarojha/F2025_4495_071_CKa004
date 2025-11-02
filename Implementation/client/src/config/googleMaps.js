@@ -9,9 +9,10 @@
  * Never commit actual API keys to version control!
  */
 
-// TODO: Replace with your actual Google Maps API Key
-// Get your API key from: https://console.cloud.google.com/
-export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyAVahG7GQUf3dQaUjT3hEQvBYliKTkikUg';
+import { GOOGLE_MAPS_API_KEY as ENV_API_KEY } from '@env';
+
+// Use environment variable, with fallback for development
+export const GOOGLE_MAPS_API_KEY = ENV_API_KEY || 'YOUR_DEVELOPMENT_API_KEY_HERE';
 
 // API Configuration
 export const GOOGLE_MAPS_CONFIG = {
