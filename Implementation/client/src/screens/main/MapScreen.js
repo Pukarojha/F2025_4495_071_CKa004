@@ -159,15 +159,6 @@ export default function MapScreen({ navigation }) {
         </ScrollView>
       </View>
 
-
-      {/* Floating Route Button */}
-      <Pressable
-        style={styles.routeButton}
-        onPress={() => setShowRouteModal(true)}
-      >
-        <Ionicons name="navigate" size={24} color="#fff" />
-      </Pressable>
-
       {/* Custom Location Button */}
       <Pressable
         style={styles.customLocationButton}
@@ -588,22 +579,6 @@ const styles = StyleSheet.create({
   activeFilterChipText: {
     color: "#fff"
   },
-  routeButton: {
-    position: "absolute",
-    bottom: 100,
-    right: spacing.md,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4
-  },
   customLocationButton: {
     position: "absolute",
     bottom: 30,
@@ -700,7 +675,7 @@ const styles = StyleSheet.create({
   },
   mapTabContainer: {
     position: "absolute",
-    bottom: 60,
+    bottom: 90,
     left: 0,
     right: 0,
     alignItems: "center"
