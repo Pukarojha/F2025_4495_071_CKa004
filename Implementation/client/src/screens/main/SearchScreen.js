@@ -1,20 +1,70 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, FlatList, Pressable, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, radius, type, shadows } from "../../theme/tokens";
+import { colors, spacing, radius, type } from "../../theme/tokens";
 
 export default function SearchScreen({ navigation }) {
-  const [q, setQ] = useState("");
-  const [activeTab, setActiveTab] = useState("Saved");
+  const [startLocation, setStartLocation] = useState(null);
+  const [destination, setDestination] = useState(null);
 
-  const recentSearches = [
-    "10 Vineyard Drive",
-    "Ross dress for less"
+  // Navigate to route preview when both locations are selected
+  useEffect(() => {
+    if (startLocation && destination) {
+      // Small delay to allow UI to update before navigating
+      const timer = setTimeout(() => {
+        navigation.navigate('RoutePreview', {
+          origin: startLocation,
+          destination: destination
+        });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [startLocation, destination, navigation]);
+
+  const savedLocations = [
+    {
+      id: 1,
+      name: "Home",
+      address: "101 Roehampton Avenue, Toronto, ON",
+      icon: "home"
+    },
+    {
+      id: 2,
+      name: "School",
+      address: "Humber College Blvd",
+      icon: "school"
+    },
+    {
+      id: 3,
+      name: "Work",
+      address: "Set once and go",
+      icon: "briefcase"
+    },
+    {
+      id: 4,
+      name: "60 East Beaver Creek Road",
+      address: "Richmond Hill, ON",
+      icon: "time-outline"
+    },
+    {
+      id: 5,
+      name: "Humber College Blvd",
+      address: "Etobicoke, ON",
+      icon: "time-outline"
+    },
+    {
+      id: 6,
+      name: "#2256 Costco",
+      address: "Islington, Etobicoke, ON",
+      icon: "time-outline"
+    },
+    {
+      id: 7,
+      name: "10 Tobermory Drive",
+      address: "Toronto, ON",
+      icon: "time-outline"
+    }
   ];
-
-  const tabs = ["Saved", "Gas", "Food", "Hotels"];
-
-  const results = q ? [{ name: "Seattle, WA", lat: 47.6062, lon: -122.3321 }] : [];
 
   return (
     <View style={styles.container}>
@@ -23,95 +73,79 @@ export default function SearchScreen({ navigation }) {
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
+        <Pressable style={styles.voiceButton}>
+          <Ionicons name="mic-outline" size={24} color={colors.text} />
+        </Pressable>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search here"
-            placeholderTextColor="#666"
-            value={q}
-            onChangeText={setQ}
-            autoFocus={true}
-          />
-          <Pressable style={styles.voiceButton}>
-            <Ionicons name="mic" size={20} color="#666" />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Filter Tabs */}
-      <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll}>
-          {tabs.map((tab) => (
-            <Pressable
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab}
+      {/* Route Inputs */}
+      <View style={styles.routeInputsContainer}>
+        <View style={styles.inputsBox}>
+          {/* Start Location Input */}
+          <Pressable
+            style={styles.inputRow}
+            onPress={() => navigation.navigate('ChooseStartLocation', {
+              onSelectLocation: (location) => setStartLocation(location)
+            })}
+          >
+            <View style={styles.iconContainer}>
+              <View style={styles.startDot} />
+            </View>
+            <View style={styles.inputTextContainer}>
+              <Text style={[styles.inputText, !startLocation && styles.placeholderText]}>
+                {startLocation?.address || startLocation || "Choose start location"}
               </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+            </View>
+          </Pressable>
+
+          {/* Destination Input */}
+          <Pressable
+            style={[styles.inputRow, styles.lastInputRow]}
+            onPress={() => navigation.navigate('ChooseDestination', {
+              onSelectLocation: (location) => setDestination(location)
+            })}
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name="location" size={20} color="#EF4444" />
+            </View>
+            <View style={styles.inputTextContainer}>
+              <Text style={[styles.inputText, !destination && styles.placeholderText]}>
+                {destination?.address || destination || "Choose destination"}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
       </View>
 
+      {/* Saved Locations List */}
       <ScrollView style={styles.content}>
-        {/* Home, Work, Connect Calendar Options */}
-        <View style={styles.optionsSection}>
-          <Pressable style={styles.option}>
-            <Ionicons name="home" size={20} color={colors.text} />
-            <Text style={styles.optionText}>Home</Text>
-            <Text style={styles.optionSubtext}>Set your end up</Text>
-          </Pressable>
-
-          <Pressable style={styles.option}>
-            <Ionicons name="briefcase" size={20} color={colors.text} />
-            <Text style={styles.optionText}>Work</Text>
-            <Text style={styles.optionSubtext}>Set your end up</Text>
-          </Pressable>
-
-          <Pressable style={styles.option}>
-            <Ionicons name="calendar" size={20} color={colors.text} />
-            <Text style={styles.optionText}>Connect Calendar</Text>
-            <Text style={styles.optionSubtext}>Go to events on time</Text>
-          </Pressable>
-        </View>
-
-        {/* Recent Searches */}
-        <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recent</Text>
-          {recentSearches.map((search, index) => (
-            <Pressable key={index} style={styles.recentItem}>
-              <Ionicons name="time" size={18} color={colors.muted} />
-              <Text style={styles.recentText}>{search}</Text>
-              <Text style={styles.recentSubtext}>10 minutes ago</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Search Results */}
-        {q.length > 0 && (
-          <View style={styles.resultsSection}>
-            <FlatList
-              data={results}
-              keyExtractor={(i, idx) => i.name + idx}
-              renderItem={({ item }) => (
-                <View style={styles.resultCard}>
-                  <Text style={styles.resultName}>{item.name}</Text>
-                  <Text style={styles.resultSub}>{item.lat.toFixed(3)}, {item.lon.toFixed(3)}</Text>
-                </View>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.empty}>No results found</Text>
+        {savedLocations.map((location) => (
+          <Pressable
+            key={location.id}
+            style={styles.locationItem}
+            onPress={() => {
+              // Handle location selection
+              if (!startLocation) {
+                setStartLocation({ address: location.name });
+              } else if (!destination) {
+                setDestination({ address: location.name });
               }
-            />
-          </View>
-        )}
+            }}
+          >
+            <View style={styles.locationIcon}>
+              <Ionicons name={location.icon} size={20} color={colors.text} />
+            </View>
+            <View style={styles.locationContent}>
+              <Text style={styles.locationName}>{location.name}</Text>
+              <Text style={styles.locationAddress}>{location.address}</Text>
+            </View>
+          </Pressable>
+        ))}
+
+        {/* More from recent history */}
+        <Pressable style={styles.moreButton}>
+          <Text style={styles.moreButtonText}>More from recent history</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -125,6 +159,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md
@@ -132,68 +167,26 @@ const styles = StyleSheet.create({
   backButton: {
     padding: spacing.xs
   },
-  searchContainer: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md
+  voiceButton: {
+    padding: spacing.xs
   },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
+  routeInputsContainer: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg
+  },
+  inputsBox: {
+    backgroundColor: "#fff",
     borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.main
+    paddingHorizontal: spacing.md,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
   },
-  searchIcon: {
-    marginRight: spacing.sm
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text
-  },
-  voiceButton: {
-    padding: 4
-  },
-  tabContainer: {
-    paddingBottom: spacing.md
-  },
-  tabScroll: {
-    paddingHorizontal: spacing.lg
-  },
-  tab: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  activeTab: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary
-  },
-  tabText: {
-    ...type.body,
-    color: colors.text,
-    fontWeight: "500"
-  },
-  activeTabText: {
-    color: colors.surface,
-    fontWeight: "600"
-  },
-  content: {
-    flex: 1
-  },
-  optionsSection: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl
-  },
-  option: {
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.md,
@@ -201,65 +194,80 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md
   },
-  optionText: {
-    flex: 1,
-    ...type.body,
-    color: colors.text,
-    fontWeight: "500"
+  lastInputRow: {
+    borderBottomWidth: 0
   },
-  optionSubtext: {
-    ...type.caption,
-    color: colors.muted
-  },
-  recentSection: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl
-  },
-  sectionTitle: {
-    ...type.h3,
-    color: colors.text,
-    marginBottom: spacing.md
-  },
-  recentItem: {
-    flexDirection: "row",
+  iconContainer: {
+    width: 24,
     alignItems: "center",
-    paddingVertical: spacing.sm,
-    gap: spacing.sm
+    justifyContent: "center"
   },
-  recentText: {
+  startDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.primary
+  },
+  input: {
     flex: 1,
-    ...type.body,
+    fontSize: 16,
+    color: colors.text,
+    paddingVertical: 0
+  },
+  inputTextContainer: {
+    flex: 1,
+    justifyContent: "center"
+  },
+  inputText: {
+    fontSize: 16,
     color: colors.text
   },
-  recentSubtext: {
+  placeholderText: {
+    color: colors.muted
+  },
+  content: {
+    flex: 1
+  },
+  locationItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  locationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  locationContent: {
+    flex: 1
+  },
+  locationName: {
+    ...type.body,
+    color: colors.text,
+    fontWeight: "600",
+    marginBottom: 4
+  },
+  locationAddress: {
     ...type.caption,
     color: colors.muted
   },
-  resultsSection: {
-    paddingHorizontal: spacing.lg
+  moreButton: {
+    alignItems: "center",
+    paddingVertical: spacing.lg,
+    marginTop: spacing.md
   },
-  resultCard: {
-    backgroundColor: colors.surfaceAlt,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  resultName: {
+  moreButtonText: {
     ...type.body,
-    color: colors.text,
-    fontWeight: "500"
-  },
-  resultSub: {
-    ...type.caption,
-    color: colors.muted,
-    marginTop: 2
-  },
-  empty: {
-    ...type.caption,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.lg
+    color: colors.primary,
+    fontWeight: "600"
   }
 });

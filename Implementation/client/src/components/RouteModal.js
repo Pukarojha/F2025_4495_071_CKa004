@@ -1,32 +1,85 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, Modal, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import MapView, { Polyline, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import WDButton from "./ui/WDButton";
 import { colors, spacing, radius, type } from "../theme/tokens";
+import { getDirections, decodePolyline } from "../services/googleMapsService";
+import { ROUTE_COLORS } from "../config/googleMaps";
 
 export default function RouteModal({ visible, onClose, origin, destination }) {
   const [selectedRoute, setSelectedRoute] = useState(0);
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [mapRegion, setMapRegion] = useState(null);
 
-  const routes = [
-    {
-      id: 0,
-      duration: "4 hr 48 min",
-      distance: "391 mi",
-      description: "Fastest route, low usual traffic",
-      steps: [
-        { instruction: "Head northeast on Mitchell Ct toward Heathwick Dr", distance: "0.1 mi" },
-        { instruction: "Turn left onto Heathwick Dr", distance: "0.3 mi" },
-        { instruction: "Turn left onto County Rd", distance: "2 mi" }
-      ]
-    },
-    {
-      id: 1,
-      duration: "5 hr 26 min",
-      distance: "425 mi",
-      description: "Scenic route",
-      steps: []
+  // Fetch directions when modal opens
+  useEffect(() => {
+    if (visible && origin && destination) {
+      fetchDirections();
     }
-  ];
+  }, [visible, origin, destination]);
+
+  const fetchDirections = async () => {
+    setLoading(true);
+    try {
+      const result = await getDirections(origin, destination, {
+        alternatives: true,
+        mode: 'driving'
+      });
+
+      if (result.success && result.routes.length > 0) {
+        const processedRoutes = result.routes.map((route, index) => ({
+          id: index,
+          duration: route.legs[0].duration.text,
+          distance: route.legs[0].distance.text,
+          description: route.summary || (index === 0 ? "Fastest route" : `Via ${route.summary}`),
+          polyline: decodePolyline(route.overview_polyline),
+          steps: route.legs[0].steps
+        }));
+
+        setRoutes(processedRoutes);
+
+        // Set map region to fit the first route
+        if (processedRoutes.length > 0) {
+          const coordinates = processedRoutes[0].polyline;
+          if (coordinates.length > 0) {
+            const lats = coordinates.map(c => c.latitude);
+            const lngs = coordinates.map(c => c.longitude);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const minLng = Math.min(...lngs);
+            const maxLng = Math.max(...lngs);
+
+            setMapRegion({
+              latitude: (minLat + maxLat) / 2,
+              longitude: (minLng + maxLng) / 2,
+              latitudeDelta: (maxLat - minLat) * 1.3,
+              longitudeDelta: (maxLng - minLng) * 1.3
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching directions:', error);
+      // Fallback to static data if API fails
+      setRoutes([
+        {
+          id: 0,
+          duration: "4 hr 48 min",
+          distance: "391 mi",
+          description: "Fastest route, low usual traffic",
+          steps: [
+            { instruction: "Head northeast on Mitchell Ct toward Heathwick Dr", distance: { text: "0.1 mi" } },
+            { instruction: "Turn left onto Heathwick Dr", distance: { text: "0.3 mi" } },
+            { instruction: "Turn left onto County Rd", distance: { text: "2 mi" } }
+          ]
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStartNavigation = () => {
     onClose();
@@ -40,6 +93,55 @@ export default function RouteModal({ visible, onClose, origin, destination }) {
       onRequestClose={onClose}
     >
       <View style={styles.container}>
+        {/* Map View with Routes */}
+        {mapRegion && routes.length > 0 && (
+          <MapView
+            style={styles.map}
+            initialRegion={mapRegion}
+            region={mapRegion}
+          >
+            {/* Render all route polylines */}
+            {routes.map((route, index) => (
+              route.polyline && (
+                <Polyline
+                  key={route.id}
+                  coordinates={route.polyline}
+                  strokeColor={index === selectedRoute ? ROUTE_COLORS.main : ROUTE_COLORS.alternate}
+                  strokeWidth={index === selectedRoute ? 6 : 4}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )
+            ))}
+
+            {/* Origin Marker */}
+            {routes[selectedRoute]?.polyline && routes[selectedRoute].polyline.length > 0 && (
+              <Marker
+                coordinate={routes[selectedRoute].polyline[0]}
+                pinColor={colors.primary}
+                title="Start"
+              />
+            )}
+
+            {/* Destination Marker */}
+            {routes[selectedRoute]?.polyline && routes[selectedRoute].polyline.length > 0 && (
+              <Marker
+                coordinate={routes[selectedRoute].polyline[routes[selectedRoute].polyline.length - 1]}
+                pinColor="#EF4444"
+                title="Destination"
+              />
+            )}
+          </MapView>
+        )}
+
+        {/* Loading Indicator */}
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Calculating route...</Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={onClose} style={styles.backButton}>
@@ -81,21 +183,21 @@ export default function RouteModal({ visible, onClose, origin, destination }) {
           ))}
 
           {/* Route Steps */}
-          {routes[selectedRoute].steps.length > 0 && (
+          {routes[selectedRoute]?.steps && routes[selectedRoute].steps.length > 0 && (
             <View style={styles.stepsContainer}>
               <Text style={styles.stepsTitle}>Steps</Text>
               {routes[selectedRoute].steps.map((step, index) => (
                 <View key={index} style={styles.stepItem}>
                   <View style={styles.stepIcon}>
                     <Ionicons
-                      name={index === 0 ? "arrow-up" : "arrow-forward"}
+                      name={step.maneuver ? `arrow-${step.maneuver}` : (index === 0 ? "arrow-up" : "arrow-forward")}
                       size={16}
                       color="#666"
                     />
                   </View>
                   <View style={styles.stepContent}>
                     <Text style={styles.stepInstruction}>{step.instruction}</Text>
-                    <Text style={styles.stepDistance}>{step.distance}</Text>
+                    <Text style={styles.stepDistance}>{step.distance?.text || step.distance}</Text>
                   </View>
                 </View>
               ))}
@@ -129,14 +231,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff"
   },
+  map: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "40%"
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "40%",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm
+  },
+  loadingText: {
+    ...type.body,
+    color: colors.text,
+    fontWeight: "500"
+  },
   header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingTop: 50,
     paddingBottom: spacing.md,
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0"
+    borderBottomColor: "#e0e0e0",
+    zIndex: 10
   },
   backButton: {
     padding: spacing.xs
@@ -179,7 +310,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.md
+    padding: spacing.md,
+    marginTop: "40%"
   },
   routeOption: {
     backgroundColor: "#f8f9fa",
