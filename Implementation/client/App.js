@@ -29,6 +29,9 @@ import GasStationScreen from "./src/screens/settings/GasStationScreen";
 import PreferredBrandScreen from "./src/screens/settings/PreferredBrandScreen";
 import SpeedometerScreen from "./src/screens/settings/SpeedometerScreen";
 import NotificationSettingsScreen from "./src/screens/settings/NotificationSettingsScreen";
+import TollPassScreen from './src/screens/settings/TollPassScreen';
+import EditProfileScreen from './src/screens/main/EditProfileScreen';
+
 
 import { colors } from "./src/theme/tokens";
 
@@ -95,6 +98,8 @@ export default function App() {
           <RootStack.Screen name="PreferredBrand" component={PreferredBrandScreen} />
           <RootStack.Screen name="Speedometer" component={SpeedometerScreen} />
           <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+          <RootStack.Screen name="TollPasses" component={TollPassScreen} />
+          <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>
