@@ -114,17 +114,20 @@ export default function ChooseDestinationScreen({ navigation, route }) {
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
 
-      // Get address from coordinates
-      try {
-        const address = await reverseGeocode({ latitude, longitude });
+      // Get address from coordinates using reverse geocoding
+      const response = await reverseGeocode({ latitude, longitude });
+
+      if (response.success && response.address) {
+        // Use the actual address from reverse geocoding
         if (onSelectLocation) {
           onSelectLocation({
-            address: address.formatted_address || "Your location",
+            address: response.address,
             coordinates: { latitude, longitude }
           });
         }
-      } catch (error) {
-        console.log("Error getting address:", error);
+      } else {
+        // Fallback if reverse geocoding fails
+        console.log("Reverse geocoding failed:", response.error, response.message);
         if (onSelectLocation) {
           onSelectLocation({
             address: "Your location",
@@ -136,6 +139,14 @@ export default function ChooseDestinationScreen({ navigation, route }) {
       navigation.goBack();
     } catch (error) {
       console.log("Error getting location:", error);
+      // Fallback for any unexpected errors
+      if (onSelectLocation) {
+        onSelectLocation({
+          address: "Your location",
+          coordinates: { latitude, longitude }
+        });
+      }
+      navigation.goBack();
     } finally {
       setLoading(false);
     }
