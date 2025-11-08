@@ -98,7 +98,8 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   };
 
   const stripHtmlTags = (html) => {
-    return html?.replace(/<[^>]*>/g, '') || '';
+    if (!html) return 'Continue on route';
+    return html.replace(/<[^>]*>/g, '');
   };
 
   // Fallback steps if no route data
