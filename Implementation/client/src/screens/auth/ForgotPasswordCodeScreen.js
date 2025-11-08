@@ -24,7 +24,7 @@ export default function ForgotPasswordCodeScreen({ navigation, route }) {
   };
 
   const handleResendCode = () => {
-    setTimer(20);
+    setTimer(20); 
     setCode("");
   };
 
