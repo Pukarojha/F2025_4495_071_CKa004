@@ -65,6 +65,16 @@ export default function SettingsMenuScreen({ navigation }) {
                     itemIndex === section.items.length - 1 && styles.settingsItemLast
                   ]}
                   onPress={() => {
+                    if (section.section === "Notifications") {
+                      if (item.label === "Phone") {
+                        navigation.navigate("NotificationSettings", { initialTab: "Push" });
+                        return;
+                      }
+                      if (item.label === "Email") {
+                        navigation.navigate("NotificationSettings", { initialTab: "Email" });
+                        return;
+                      }
+                    }
                     // Navigate to specific settings screen
                     if (item.route) {
                       navigation.navigate(item.route);

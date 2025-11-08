@@ -19,9 +19,16 @@ import MapScreen from "./src/screens/main/MapScreen";
 import AlertsScreen from "./src/screens/main/AlertScreen";
 import SearchScreen from "./src/screens/main/SearchScreen";
 import SettingsMenuScreen from "./src/screens/main/SettingsMenuScreen";
+import RoutePreviewScreen from "./src/screens/main/RoutePreviewScreen";
+import ActiveNavigationScreen from "./src/screens/main/ActiveNavigationScreen";
+import ChooseStartLocationScreen from "./src/screens/main/ChooseStartLocationScreen";
+import ChooseDestinationScreen from "./src/screens/main/ChooseDestinationScreen";
+import MapPickerScreen from "./src/screens/main/MapPickerScreen";
+import AddStopsScreen from "./src/screens/main/AddStopsScreen";
 import GasStationScreen from "./src/screens/settings/GasStationScreen";
 import PreferredBrandScreen from "./src/screens/settings/PreferredBrandScreen";
 import SpeedometerScreen from "./src/screens/settings/SpeedometerScreen";
+import NotificationSettingsScreen from "./src/screens/settings/NotificationSettingsScreen";
 
 import { colors } from "./src/theme/tokens";
 
@@ -78,9 +85,16 @@ export default function App() {
           <RootStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           <RootStack.Screen name="PasswordChanged" component={PasswordChangedScreen} />
           <RootStack.Screen name="Main" component={MainTabs} />
+          <RootStack.Screen name="RoutePreview" component={RoutePreviewScreen} />
+          <RootStack.Screen name="ActiveNavigation" component={ActiveNavigationScreen} />
+          <RootStack.Screen name="ChooseStartLocation" component={ChooseStartLocationScreen} />
+          <RootStack.Screen name="ChooseDestination" component={ChooseDestinationScreen} />
+          <RootStack.Screen name="MapPicker" component={MapPickerScreen} />
+          <RootStack.Screen name="AddStops" component={AddStopsScreen} />
           <RootStack.Screen name="GasStation" component={GasStationScreen} />
           <RootStack.Screen name="PreferredBrand" component={PreferredBrandScreen} />
           <RootStack.Screen name="Speedometer" component={SpeedometerScreen} />
+          <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>
