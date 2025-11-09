@@ -1,4 +1,20 @@
 import React from "react";
+import './src/aws-exports';
+// App.js
+
+// 1) Load Amplify's RN polyfills first
+import '@aws-amplify/react-native';
+
+// 2) (Expo) complete browser auth sessions
+import * as WebBrowser from 'expo-web-browser';
+WebBrowser.maybeCompleteAuthSession();
+
+// 3) Now load your Amplify.configure(...)
+import './src/aws-exports';  // ← your file that calls Amplify.configure
+
+
+
+
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";

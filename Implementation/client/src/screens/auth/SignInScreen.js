@@ -35,8 +35,8 @@ export default function SignInScreen({ navigation }) {
         placeholder="••••••••"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry={true}
-        showPasswordToggle={true}
+        secureTextEntry
+        showPasswordToggle
         style={styles.inputField}
       />
 
@@ -53,20 +53,34 @@ export default function SignInScreen({ navigation }) {
       <Text style={styles.orText}>Or Login with</Text>
 
       <View style={styles.socialContainer}>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Facebook")}>
+        <Pressable
+          style={styles.socialBtn}
+          onPress={() => handleSocialLogin("Facebook")}
+        >
           <Ionicons name="logo-facebook" size={20} color="#1877F2" />
         </Pressable>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Google")}>
+
+        <Pressable
+          style={styles.socialBtn}
+          onPress={() => handleSocialLogin("Google")}
+        >
           <Text style={styles.googleText}>G</Text>
         </Pressable>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Apple")}>
+
+        <Pressable
+          style={styles.socialBtn}
+          onPress={() => handleSocialLogin("Apple")}
+        >
           <Ionicons name="logo-apple" size={20} color="#000" />
         </Pressable>
       </View>
 
       <Text style={styles.signUpLink}>
-        Don't have an account?{" "}
-        <Text style={styles.signUpLinkBold} onPress={() => navigation.navigate("SignUp")}>
+        Don’t have an account?{" "}
+        <Text
+          style={styles.signUpLinkBold}
+          onPress={() => navigation.navigate("SignUp")}
+        >
           Sign up
         </Text>
       </Text>
@@ -79,39 +93,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
     padding: spacing.lg,
-    paddingTop: spacing.xxl
+    paddingTop: spacing.xxl,
   },
   h1: {
     ...type.h1,
     color: colors.text,
     marginTop: spacing.xl,
-    marginBottom: spacing.xxl
+    marginBottom: spacing.xxl,
   },
   inputField: {
-    marginBottom: spacing.md
+    marginBottom: spacing.md,
   },
   forgotPassword: {
     ...type.body,
     color: colors.primary,
     textAlign: "right",
     marginBottom: spacing.xxl,
-    marginTop: spacing.sm
+    marginTop: spacing.sm,
   },
   loginBtn: {
     marginBottom: spacing.lg,
-    ...shadows.main
+    ...shadows.main,
   },
   orText: {
     ...type.body,
     color: colors.muted,
     textAlign: "center",
-    marginVertical: spacing.lg
+    marginVertical: spacing.lg,
   },
   socialContainer: {
     flexDirection: "row",
     justifyContent: "center",
     gap: spacing.md,
-    marginBottom: spacing.xxl
+    marginBottom: spacing.xxl,
   },
   socialBtn: {
     width: 48,
@@ -122,20 +136,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surface,
-    ...shadows.main
+    ...shadows.main,
   },
   googleText: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#DB4437"
+    color: "#DB4437",
   },
   signUpLink: {
     ...type.body,
     color: colors.muted,
-    textAlign: "center"
+    textAlign: "center",
   },
   signUpLinkBold: {
     fontWeight: "600",
-    color: colors.text
-  }
+    color: colors.text,
+  },
 });
