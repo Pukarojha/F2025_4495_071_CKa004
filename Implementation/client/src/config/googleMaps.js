@@ -12,7 +12,7 @@
 import { GOOGLE_MAPS_API_KEY as ENV_API_KEY } from '@env';
 
 // Use environment variable, with fallback for development
-export const GOOGLE_MAPS_API_KEY = ENV_API_KEY || 'YOUR_DEVELOPMENT_API_KEY_HERE';
+export const GOOGLE_MAPS_API_KEY = ENV_API_KEY || 'AIzaSyAVahG7GQUf3dQaUjT3hEQvBYliKTkikUg';
 
 // API Configuration
 export const GOOGLE_MAPS_CONFIG = {

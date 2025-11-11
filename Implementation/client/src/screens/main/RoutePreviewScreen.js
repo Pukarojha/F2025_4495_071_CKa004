@@ -68,7 +68,20 @@ export default function RoutePreviewScreen({ navigation, route }) {
           polyline: decodePolyline(route.overview_polyline),
           startLocation: route.legs[0].start_location,
           endLocation: route.legs[0].end_location,
-          steps: route.legs[0].steps
+          steps: route.legs[0].steps.map(step => {
+            // The Google Maps API returns 'html_instructions' field with the turn instructions
+            // Extract the instruction text and clean HTML tags
+            const instruction = step.html_instructions || step.instruction || 'Continue straight';
+
+            return {
+              html_instructions: instruction,
+              distance: step.distance,
+              duration: step.duration,
+              maneuver: step.maneuver || 'straight',
+              start_location: step.start_location,
+              end_location: step.end_location
+            };
+          })
         }));
 
         setRoutes(processedRoutes);
