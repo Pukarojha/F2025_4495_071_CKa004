@@ -49,11 +49,20 @@ export default function MapPickerScreen({ navigation, route }) {
     setLoading(true);
 
     try {
-      // Get address from coordinates
-      const address = await reverseGeocode({ latitude, longitude });
-      setLocationAddress(address.formatted_address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      // Get address from coordinates using reverse geocoding
+      const response = await reverseGeocode({ latitude, longitude });
+
+      if (response.success && response.address) {
+        // Use the actual address from reverse geocoding
+        setLocationAddress(response.address);
+      } else {
+        // Fallback to coordinates if reverse geocoding fails
+        console.log("Reverse geocoding failed:", response.error, response.message);
+        setLocationAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      }
     } catch (error) {
       console.log("Error getting address:", error);
+      // Fallback to coordinates for any unexpected errors
       setLocationAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     } finally {
       setLoading(false);

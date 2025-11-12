@@ -144,6 +144,8 @@ export default function AddStopsScreen({ navigation, route }) {
         if (onAddStop) {
           onAddStop(locationData);
         }
+        // Navigate back to ActiveNavigationScreen after adding the stop
+        navigation.goBack();
       }
     });
   };
@@ -151,18 +153,32 @@ export default function AddStopsScreen({ navigation, route }) {
   const handleSelectSearchResult = async (place) => {
     setLoading(true);
     try {
-      const placeDetails = await getPlaceDetails(place.place_id);
+      const result = await getPlaceDetails(place.place_id);
 
-      if (onAddStop) {
-        onAddStop({
-          address: placeDetails.formatted_address,
-          coordinates: {
-            latitude: placeDetails.geometry.location.lat,
-            longitude: placeDetails.geometry.location.lng
-          }
-        });
+      console.log("Place details result:", result);
+
+      if (result.success && result.place) {
+        const placeData = result.place;
+        if (onAddStop) {
+          onAddStop({
+            address: placeData.address || place.description,
+            coordinates: {
+              latitude: placeData.location.lat,
+              longitude: placeData.location.lng
+            }
+          });
+        }
+        navigation.goBack();
+      } else {
+        // If place details failed, try to add with just address (no coordinates)
+        console.log("Failed to get place details, adding without coordinates");
+        if (onAddStop) {
+          onAddStop({
+            address: place.description
+          });
+        }
+        navigation.goBack();
       }
-      navigation.goBack();
     } catch (error) {
       console.log("Error getting place details:", error);
       if (onAddStop) {

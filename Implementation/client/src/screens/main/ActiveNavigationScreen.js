@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, PanResponder, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated, PanResponder, Dimensions, ActivityIndicator } from "react-native";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../../theme/tokens";
 import { ROUTE_COLORS } from "../../config/googleMaps";
+import { getDirections, decodePolyline } from "../../services/googleMapsService";
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.7; // 70% of screen
@@ -14,6 +15,10 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   const { routes, selectedRoute = 0, origin, destination } = routeParams;
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [stops, setStops] = useState([]);
+  const [recalculatedRoutes, setRecalculatedRoutes] = useState(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isStepsExpanded, setIsStepsExpanded] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: 43.6532,
     longitude: -79.3832,
@@ -21,7 +26,9 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     longitudeDelta: 0.01
   });
 
-  const currentRoute = routes?.[selectedRoute];
+  // Use recalculated routes if available, otherwise use original routes
+  const activeRoutes = recalculatedRoutes || routes;
+  const currentRoute = activeRoutes?.[selectedRoute];
   const steps = currentRoute?.steps || [];
   const currentStep = steps[currentStepIndex];
 
@@ -62,6 +69,101 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     }
   }, []);
 
+  // Recalculate route when stops are added
+  useEffect(() => {
+    if (stops.length === 0 || !origin || !destination) {
+      setRecalculatedRoutes(null);
+      return;
+    }
+
+    const recalculateRoute = async () => {
+      setIsRecalculating(true);
+      try {
+        // Convert stops to waypoints format
+        const waypoints = stops
+          .filter(stop => stop.coordinates)
+          .map(stop => ({
+            latitude: stop.coordinates.latitude,
+            longitude: stop.coordinates.longitude
+          }));
+
+        // Determine origin and destination parameters
+        const originParam = origin.coordinates || origin.address;
+        const destParam = destination.coordinates || destination.address;
+
+        console.log('Recalculating route with waypoints:', waypoints);
+        console.log('Origin:', originParam, 'Destination:', destParam);
+
+        const directionsResponse = await getDirections(
+          originParam,
+          destParam,
+          {
+            waypoints,
+            alternatives: true
+          }
+        );
+
+        if (directionsResponse.success && directionsResponse.routes.length > 0) {
+          console.log('Directions API response:', directionsResponse);
+
+          // Transform routes to match the expected format
+          const transformedRoutes = directionsResponse.routes.map((route, index) => {
+            // Decode the polyline
+            const polylineCoords = decodePolyline(route.overview_polyline);
+
+            // Flatten all steps from all legs
+            const allSteps = route.legs.flatMap(leg =>
+              leg.steps.map(step => ({
+                html_instructions: step.instruction || step.html_instructions || 'Continue straight',
+                distance: step.distance,
+                duration: step.duration,
+                maneuver: step.maneuver || 'straight',
+                start_location: step.start_location,
+                end_location: step.end_location
+              }))
+            );
+
+            // Calculate total distance and duration
+            const totalDistance = route.legs.reduce((sum, leg) => sum + leg.distance.value, 0);
+            const totalDuration = route.legs.reduce((sum, leg) => sum + leg.duration.value, 0);
+
+            // Calculate arrival time
+            const calculateArrivalTime = (durationInSeconds) => {
+              const now = new Date();
+              const arrival = new Date(now.getTime() + durationInSeconds * 1000);
+              return arrival.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+            };
+
+            return {
+              id: index,
+              polyline: polylineCoords,
+              steps: allSteps,
+              distance: `${(totalDistance / 1000).toFixed(1)} km`,
+              duration: `${Math.round(totalDuration / 60)} min`,
+              arrivalTime: calculateArrivalTime(totalDuration),
+              startLocation: route.legs[0].start_location,
+              endLocation: route.legs[route.legs.length - 1].end_location,
+              description: `Route with ${stops.length} stop${stops.length > 1 ? 's' : ''} - ${route.summary || 'fastest route'}`
+            };
+          });
+
+          setRecalculatedRoutes(transformedRoutes);
+          console.log('Route recalculated with', stops.length, 'stop(s)', transformedRoutes);
+        }
+      } catch (error) {
+        console.error('Error recalculating route:', error);
+      } finally {
+        setIsRecalculating(false);
+      }
+    };
+
+    recalculateRoute();
+  }, [stops, origin, destination]);
+
   const handleStop = () => {
     // Go back to previous screen
     navigation.goBack();
@@ -72,7 +174,8 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     navigation.navigate('AddStops', {
       onAddStop: (stopLocation) => {
         console.log('Stop added:', stopLocation);
-        // TODO: Add logic to insert stop into route
+        // Add stop to the stops array
+        setStops(prevStops => [...prevStops, stopLocation]);
       }
     });
   };
@@ -98,7 +201,8 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   };
 
   const stripHtmlTags = (html) => {
-    return html?.replace(/<[^>]*>/g, '') || '';
+    if (!html) return 'Continue on route';
+    return html.replace(/<[^>]*>/g, '');
   };
 
   // Fallback steps if no route data
@@ -139,6 +243,25 @@ export default function ActiveNavigationScreen({ navigation, route }) {
             />
           )}
 
+          {/* Stop Markers */}
+          {stops.map((stop, index) => (
+            stop.coordinates && (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: stop.coordinates.latitude,
+                  longitude: stop.coordinates.longitude
+                }}
+              >
+                <View style={styles.stopMarker}>
+                  <View style={styles.stopMarkerInner}>
+                    <Text style={styles.stopMarkerText}>{index + 1}</Text>
+                  </View>
+                </View>
+              </Marker>
+            )
+          ))}
+
           {/* Destination Marker */}
           {currentRoute?.endLocation && (
             <Marker
@@ -165,6 +288,23 @@ export default function ActiveNavigationScreen({ navigation, route }) {
               <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
             </Pressable>
           </View>
+
+          {/* Display added stops */}
+          {stops.map((stop, index) => (
+            <View key={index} style={styles.locationRow}>
+              <View style={styles.stopDot} />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {stop.address || stop.name || "Added stop"}
+              </Text>
+              <Pressable
+                style={styles.removeButton}
+                onPress={() => setStops(prevStops => prevStops.filter((_, i) => i !== index))}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.muted} />
+              </Pressable>
+            </View>
+          ))}
+
           <View style={styles.locationRow}>
             <Ionicons name="location" size={16} color="#EF4444" />
             <Text style={styles.locationText} numberOfLines={1}>
@@ -207,57 +347,146 @@ export default function ActiveNavigationScreen({ navigation, route }) {
 
         {/* Route Info */}
         <View style={styles.routeInfoContainer}>
-          <View style={styles.routeInfo}>
-            <Text style={styles.duration}>{currentRoute?.duration || "12 min"}</Text>
-            <Text style={styles.distance}>({currentRoute?.distance || "6.2 km"})</Text>
-          </View>
-          <Text style={styles.arrivalTime}>Arrive {currentRoute?.arrivalTime || "10:15 pm"}</Text>
-          <Text style={styles.routeDescription}>
-            {currentRoute?.description || "Fastest route, the usual traffic"}
-          </Text>
+          {isRecalculating ? (
+            <View style={styles.recalculatingContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.recalculatingText}>Recalculating route with stops...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.routeInfo}>
+                <Text style={styles.duration}>{currentRoute?.duration || "12 min"}</Text>
+                <Text style={styles.distance}>({currentRoute?.distance || "6.2 km"})</Text>
+              </View>
+              <Text style={styles.arrivalTime}>Arrive {currentRoute?.arrivalTime || "10:15 pm"}</Text>
+              <Text style={styles.routeDescription}>
+                {currentRoute?.description || "Fastest route, the usual traffic"}
+              </Text>
+            </>
+          )}
         </View>
 
-        {/* Steps Section Header */}
-        <View style={styles.stepsHeader}>
-          <Ionicons name="location" size={20} color={colors.primary} />
+        {/* Steps Section Header - Collapsible */}
+        <Pressable
+          style={styles.stepsHeader}
+          onPress={() => setIsStepsExpanded(!isStepsExpanded)}
+        >
+          <Ionicons name="location" size={20} color="#EF4444" />
           <Text style={styles.stepsHeaderText}>
-            {destination?.address || "School (Humber college)"}
+            {stops.length > 0
+              ? `Next stop: ${stops[0].address || stops[0].name || 'Added stop'}`
+              : destination?.address || "School (Humber college)"}
           </Text>
-        </View>
+          <Ionicons
+            name={isStepsExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.text}
+          />
+        </Pressable>
 
-        {/* Steps List */}
-        <ScrollView style={styles.stepsList} showsVerticalScrollIndicator={false}>
-          {displaySteps.map((step, index) => (
-            <View key={index} style={styles.stepItem}>
-              <View style={styles.stepIconContainer}>
-                <Ionicons
-                  name={getManeuverIcon(step.maneuver)}
-                  size={24}
-                  color={colors.text}
-                />
+        {/* Steps List - Collapsible */}
+        {isStepsExpanded && (
+          <ScrollView style={styles.stepsList} showsVerticalScrollIndicator={false}>
+            {/* Origin Item */}
+            <View style={styles.originItem}>
+              <View style={styles.originIconContainer}>
+                <View style={styles.originDot} />
               </View>
               <View style={styles.stepContent}>
-                <Text style={styles.stepInstruction}>
-                  {stripHtmlTags(step.html_instructions)}
+                <Text style={styles.originText}>
+                  {origin?.address || "Starting location"}
                 </Text>
-                <Text style={styles.stepDistance}>{step.distance?.text || "0 m"}</Text>
+                <Text style={styles.originSubtext}>Your starting point</Text>
               </View>
             </View>
-          ))}
 
-          {/* Destination Item */}
-          <View style={styles.destinationItem}>
-            <View style={styles.destinationIconContainer}>
-              <Ionicons name="location" size={24} color="#EF4444" />
+{(() => {
+              // When there are stops, we need to insert stop markers at the right positions
+              if (stops.length > 0 && recalculatedRoutes && currentRoute?.legs) {
+                const legs = currentRoute.legs;
+                let stepIndex = 0;
+                const stepsWithStops = [];
+
+                legs.forEach((leg, legIndex) => {
+                  // Add all steps from this leg
+                  leg.steps.forEach((step, i) => {
+                    const globalIndex = stepIndex++;
+                    stepsWithStops.push(
+                      <View key={`step-${globalIndex}`} style={styles.stepItem}>
+                        <View style={styles.stepIconContainer}>
+                          <Ionicons
+                            name={getManeuverIcon(step.maneuver)}
+                            size={24}
+                            color={colors.text}
+                          />
+                        </View>
+                        <View style={styles.stepContent}>
+                          <Text style={styles.stepInstruction}>
+                            {stripHtmlTags(step.html_instructions || step.instruction)}
+                          </Text>
+                          <Text style={styles.stepDistance}>{step.distance?.text || "0 m"}</Text>
+                        </View>
+                      </View>
+                    );
+                  });
+
+                  // Add stop marker after each leg (except the last one)
+                  if (legIndex < legs.length - 1 && stops[legIndex]) {
+                    stepsWithStops.push(
+                      <View key={`stop-${legIndex}`} style={styles.stopStepItem}>
+                        <View style={styles.stopStepIconContainer}>
+                          <View style={styles.stopStepMarker}>
+                            <Text style={styles.stopStepNumber}>{legIndex + 1}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.stepContent}>
+                          <Text style={styles.stopStepText}>
+                            Stop {legIndex + 1}: {stops[legIndex].address || stops[legIndex].name}
+                          </Text>
+                          <Text style={styles.stopStepSubtext}>Waypoint on your route</Text>
+                        </View>
+                      </View>
+                    );
+                  }
+                });
+
+                return stepsWithStops;
+              } else {
+                // No stops, just render regular steps
+                return displaySteps.map((step, index) => (
+                  <View key={index} style={styles.stepItem}>
+                    <View style={styles.stepIconContainer}>
+                      <Ionicons
+                        name={getManeuverIcon(step.maneuver)}
+                        size={24}
+                        color={colors.text}
+                      />
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepInstruction}>
+                        {stripHtmlTags(step.html_instructions)}
+                      </Text>
+                      <Text style={styles.stepDistance}>{step.distance?.text || "0 m"}</Text>
+                    </View>
+                  </View>
+                ));
+              }
+            })()}
+
+            {/* Destination Item */}
+            <View style={styles.destinationItem}>
+              <View style={styles.destinationIconContainer}>
+                <Ionicons name="location" size={24} color="#EF4444" />
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.destinationText}>
+                  {destination?.address || "Home (101 Roehampton Ave)"}
+                </Text>
+                <Text style={styles.destinationSubtext}>Destination will be on the left</Text>
+              </View>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.destinationText}>
-                {destination?.address || "Home (101 Roehampton Ave)"}
-              </Text>
-              <Text style={styles.destinationSubtext}>Destination will be on the left</Text>
-            </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        )}
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
@@ -330,6 +559,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary
   },
+  stopDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: colors.primary
+  },
   locationText: {
     flex: 1,
     ...type.body,
@@ -338,6 +575,9 @@ const styles = StyleSheet.create({
     fontSize: 14
   },
   menuButton: {
+    padding: spacing.xs
+  },
+  removeButton: {
     padding: spacing.xs
   },
   swapButton: {
@@ -363,6 +603,30 @@ const styles = StyleSheet.create({
   endMarker: {
     alignItems: "center",
     justifyContent: "center"
+  },
+  stopMarker: {
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  stopMarkerInner: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5
+  },
+  stopMarkerText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14
   },
   bottomSheet: {
     position: "absolute",
@@ -452,6 +716,17 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.muted
   },
+  recalculatingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm
+  },
+  recalculatingText: {
+    ...type.body,
+    color: colors.primary,
+    fontStyle: "italic"
+  },
   stepsHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -497,6 +772,82 @@ const styles = StyleSheet.create({
   stepDistance: {
     ...type.caption,
     color: colors.muted
+  },
+  originItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  originIconContainer: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  originDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderWidth: 3,
+    borderColor: colors.primary
+  },
+  originText: {
+    ...type.body,
+    color: colors.text,
+    fontWeight: "600",
+    marginBottom: 4
+  },
+  originSubtext: {
+    ...type.caption,
+    color: colors.muted,
+    fontStyle: "italic"
+  },
+  stopStepItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+    backgroundColor: "#E0F2FE",
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary
+  },
+  stopStepIconContainer: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  stopStepMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff"
+  },
+  stopStepNumber: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14
+  },
+  stopStepText: {
+    ...type.body,
+    color: colors.text,
+    fontWeight: "600",
+    marginBottom: 4
+  },
+  stopStepSubtext: {
+    ...type.caption,
+    color: colors.primary,
+    fontStyle: "italic"
   },
   destinationItem: {
     flexDirection: "row",
