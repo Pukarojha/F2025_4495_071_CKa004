@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView } from "react-native";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../../theme/tokens";
@@ -35,6 +35,7 @@ export default function RoutePreviewScreen({ navigation, route }) {
     latitudeDelta: 0.5,
     longitudeDelta: 0.5
   });
+  const mapRef = useRef(null);
 
   useEffect(() => {
     fetchDirections();
@@ -135,6 +136,28 @@ export default function RoutePreviewScreen({ navigation, route }) {
     setLoading(false);
   };
 
+  const handleRouteSelect = (index) => {
+    setSelectedRoute(index);
+
+    // Fit the map to the selected route
+    if (routes[index] && routes[index].polyline && routes[index].polyline.length > 0 && mapRef.current) {
+      const coordinates = routes[index].polyline;
+      const lats = coordinates.map(c => c.latitude);
+      const lngs = coordinates.map(c => c.longitude);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+
+      mapRef.current.animateToRegion({
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLng + maxLng) / 2,
+        latitudeDelta: (maxLat - minLat) * 1.5,
+        longitudeDelta: (maxLng - minLng) * 1.5
+      }, 500);
+    }
+  };
+
   const handleStart = () => {
     // Navigate to active navigation screen
     navigation.navigate('ActiveNavigation', {
@@ -193,6 +216,7 @@ export default function RoutePreviewScreen({ navigation, route }) {
           </View>
         ) : (
           <MapView
+            ref={mapRef}
             style={styles.map}
             region={mapRegion}
             showsUserLocation={false}
@@ -204,7 +228,8 @@ export default function RoutePreviewScreen({ navigation, route }) {
                   coordinates={route.polyline}
                   strokeColor={index === selectedRoute ? ROUTE_COLORS.main : ROUTE_COLORS.alternate}
                   strokeWidth={index === selectedRoute ? 6 : 4}
-                  onPress={() => setSelectedRoute(index)}
+                  onPress={() => handleRouteSelect(index)}
+                  tappable={true}
                 />
               )
             ))}
@@ -242,6 +267,54 @@ export default function RoutePreviewScreen({ navigation, route }) {
         <Pressable style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
+
+        {/* Route Selection Cards */}
+        {!loading && routes.length > 1 && (
+          <View style={styles.routeCardsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.routeCardsScroll}
+            >
+              {routes.map((route, index) => (
+                <Pressable
+                  key={route.id}
+                  style={[
+                    styles.routeCard,
+                    index === selectedRoute && styles.routeCardSelected
+                  ]}
+                  onPress={() => handleRouteSelect(index)}
+                >
+                  <View style={styles.routeCardHeader}>
+                    <Text style={[
+                      styles.routeCardTitle,
+                      index === selectedRoute && styles.routeCardTitleSelected
+                    ]}>
+                      Route {index + 1}
+                    </Text>
+                    {index === 0 && (
+                      <View style={styles.fastestBadge}>
+                        <Text style={styles.fastestBadgeText}>Fastest</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.routeCardDuration,
+                    index === selectedRoute && styles.routeCardDurationSelected
+                  ]}>
+                    {route.duration}
+                  </Text>
+                  <Text style={[
+                    styles.routeCardDistance,
+                    index === selectedRoute && styles.routeCardDistanceSelected
+                  ]}>
+                    {route.distance}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* Bottom Route Card */}
@@ -471,5 +544,75 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: "500",
     fontSize: 10
+  },
+  routeCardsContainer: {
+    position: "absolute",
+    bottom: spacing.lg,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.md
+  },
+  routeCardsScroll: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs
+  },
+  routeCard: {
+    backgroundColor: "#fff",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    minWidth: 120,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  routeCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: "#EEF2FF"
+  },
+  routeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs
+  },
+  routeCardTitle: {
+    ...type.caption,
+    fontWeight: "600",
+    color: colors.text
+  },
+  routeCardTitleSelected: {
+    color: colors.primary
+  },
+  fastestBadge: {
+    backgroundColor: "#10B981",
+    borderRadius: radius.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2
+  },
+  fastestBadgeText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#fff"
+  },
+  routeCardDuration: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 2
+  },
+  routeCardDurationSelected: {
+    color: colors.primary
+  },
+  routeCardDistance: {
+    ...type.caption,
+    color: colors.muted,
+    fontSize: 11
+  },
+  routeCardDistanceSelected: {
+    color: colors.primary
   }
 });
