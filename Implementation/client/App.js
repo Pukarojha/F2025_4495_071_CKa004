@@ -25,12 +25,13 @@ import ChooseStartLocationScreen from "./src/screens/main/ChooseStartLocationScr
 import ChooseDestinationScreen from "./src/screens/main/ChooseDestinationScreen";
 import MapPickerScreen from "./src/screens/main/MapPickerScreen";
 import AddStopsScreen from "./src/screens/main/AddStopsScreen";
+import LocationPickerScreen from "./src/screens/main/LocationPickerScreen";
 import GasStationScreen from "./src/screens/settings/GasStationScreen";
 import PreferredBrandScreen from "./src/screens/settings/PreferredBrandScreen";
 import SpeedometerScreen from "./src/screens/settings/SpeedometerScreen";
 import NotificationSettingsScreen from "./src/screens/settings/NotificationSettingsScreen";
 import TollPassScreen from './src/screens/settings/TollPassScreen';
-import EditProfileScreen from './src/screens/main/EditProfileScreen';
+//import EditProfileScreen from './src/screens/main/EditProfileScreen';
 
 
 import { colors } from "./src/theme/tokens";
@@ -94,12 +95,13 @@ export default function App() {
           <RootStack.Screen name="ChooseDestination" component={ChooseDestinationScreen} />
           <RootStack.Screen name="MapPicker" component={MapPickerScreen} />
           <RootStack.Screen name="AddStops" component={AddStopsScreen} />
+          <RootStack.Screen name="LocationPicker" component={LocationPickerScreen} />
           <RootStack.Screen name="GasStation" component={GasStationScreen} />
           <RootStack.Screen name="PreferredBrand" component={PreferredBrandScreen} />
           <RootStack.Screen name="Speedometer" component={SpeedometerScreen} />
           <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <RootStack.Screen name="TollPasses" component={TollPassScreen} />
-          <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
+          
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

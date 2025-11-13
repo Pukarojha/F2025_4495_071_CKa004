@@ -339,6 +339,60 @@ export const reverseGeocode = async (location) => {
 };
 
 /**
+ * Get nearby popular places
+ * @param {Object} location - Current location {latitude, longitude}
+ * @param {number} radius - Search radius in meters (default 5000)
+ * @param {string} type - Place type (default null for all types)
+ * @returns {Promise} - Nearby places response
+ */
+export const getNearbyPlaces = async (location, radius = 5000, type = null) => {
+  try {
+    const params = {
+      location: `${location.latitude},${location.longitude}`,
+      radius,
+      key: GOOGLE_MAPS_API_KEY,
+      rankby: 'prominence'
+    };
+
+    if (type) {
+      params.type = type;
+    }
+
+    const response = await axios.get(`${PLACES_API_URL}/nearbysearch/json`, { params });
+
+    if (response.data.status === 'OK' || response.data.status === 'ZERO_RESULTS') {
+      return {
+        success: true,
+        places: response.data.results.map(place => ({
+          id: place.place_id,
+          name: place.name,
+          address: place.vicinity,
+          location: place.geometry.location,
+          types: place.types,
+          rating: place.rating,
+          userRatingsTotal: place.user_ratings_total,
+          openNow: place.opening_hours?.open_now,
+          icon: place.icon
+        }))
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.status,
+        message: response.data.error_message || 'Failed to get nearby places'
+      };
+    }
+  } catch (error) {
+    console.error('Error getting nearby places:', error);
+    return {
+      success: false,
+      error: 'REQUEST_FAILED',
+      message: error.message
+    };
+  }
+};
+
+/**
  * Decode polyline string to coordinates
  * @param {string} encoded - Encoded polyline string
  * @returns {Array} - Array of {latitude, longitude} objects
