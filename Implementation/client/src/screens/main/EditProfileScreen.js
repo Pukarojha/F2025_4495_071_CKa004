@@ -8,10 +8,12 @@ import {
   Alert,
   ScrollView,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import CountryPicker from 'react-native-country-picker-modal';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const H_PADDING = width < 400 ? 10 : 22; // adaptive for different screens
@@ -42,26 +44,45 @@ function FloatingLabelInput({ label, value, onChangeText, style, ...props }) {
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const onProfileUpdate = route.params?.onProfileUpdate;
 
-  const [fullName, setFullName] = useState('John doe');
-  const [username, setUsername] = useState('John_doe');
-  const [email, setEmail] = useState('youremail@domain.com');
-  const [gender, setGender] = useState('Female');
-  const [phone, setPhone] = useState('123-456-7890');
-  const [country, setCountry] = useState({ name: 'United States', cca2: 'US' });
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
+  const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState({ name: '', cca2: 'US' });
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [city, setCity] = useState('New York');
-  const [address, setAddress] = useState('45 New Avenue');
+  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
   const [address2, setAddress2] = useState('');
-  const [zip, setZip] = useState('10010');
+  const [zip, setZip] = useState('');
 
   const submit = () => {
+    if (!fullName.trim() || !username.trim() || !email.trim()) {
+      Alert.alert('Required Fields', 'Please fill in at least Full Name, Username, and Email.');
+      return;
+    }
+
+    if (onProfileUpdate) {
+      onProfileUpdate({
+        fullName: fullName.trim(),
+        username: username.trim(),
+        email: email.trim(),
+      });
+    }
+
     Alert.alert('Profile Submitted', 'Your profile has been updated!');
     navigation.goBack();
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#eef5fa" }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#eef5fa" }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
           <Ionicons name="arrow-back" size={25} color="#222" />
@@ -77,6 +98,7 @@ export default function EditProfileScreen() {
           { paddingHorizontal: H_PADDING }
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
       >
         <FloatingLabelInput
           label="Full name"
@@ -193,7 +215,7 @@ export default function EditProfileScreen() {
           <Text style={styles.submitText}>Submit</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
