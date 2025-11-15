@@ -34,6 +34,8 @@ import TollPassScreen from './src/screens/settings/TollPassScreen';
 import EditProfileScreen from './src/screens/main/EditProfileScreen';
 
 
+
+
 import { colors } from "./src/theme/tokens";
 
 const queryClient = new QueryClient();
