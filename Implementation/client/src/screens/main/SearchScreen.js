@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../../theme/tokens";
+import { useSavedLocations } from "../../hooks/useSavedLocations";
 
 export default function SearchScreen({ navigation }) {
   const [startLocation, setStartLocation] = useState(null);
   const [destination, setDestination] = useState(null);
+  const { savedLocations, loading: loadingSavedLocations, refreshLocations } = useSavedLocations();
+
+  // Refresh saved locations when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      refreshLocations();
+    });
+    return unsubscribe;
+  }, [navigation, refreshLocations]);
 
   // Navigate to route preview when both locations are selected
   useEffect(() => {
@@ -20,51 +30,6 @@ export default function SearchScreen({ navigation }) {
       return () => clearTimeout(timer);
     }
   }, [startLocation, destination, navigation]);
-
-  const savedLocations = [
-    {
-      id: 1,
-      name: "Home",
-      address: "101 Roehampton Avenue, Toronto, ON",
-      icon: "home"
-    },
-    {
-      id: 2,
-      name: "School",
-      address: "Humber College Blvd",
-      icon: "school"
-    },
-    {
-      id: 3,
-      name: "Work",
-      address: "Set once and go",
-      icon: "briefcase"
-    },
-    {
-      id: 4,
-      name: "60 East Beaver Creek Road",
-      address: "Richmond Hill, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 5,
-      name: "Humber College Blvd",
-      address: "Etobicoke, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 6,
-      name: "#2256 Costco",
-      address: "Islington, Etobicoke, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 7,
-      name: "10 Tobermory Drive",
-      address: "Toronto, ON",
-      icon: "time-outline"
-    }
-  ];
 
   return (
     <View style={styles.container}>
@@ -119,28 +84,46 @@ export default function SearchScreen({ navigation }) {
 
       {/* Saved Locations List */}
       <ScrollView style={styles.content}>
-        {savedLocations.map((location) => (
-          <Pressable
-            key={location.id}
-            style={styles.locationItem}
-            onPress={() => {
-              // Handle location selection
-              if (!startLocation) {
-                setStartLocation({ address: location.name });
-              } else if (!destination) {
-                setDestination({ address: location.name });
-              }
-            }}
-          >
-            <View style={styles.locationIcon}>
-              <Ionicons name={location.icon} size={20} color={colors.text} />
-            </View>
-            <View style={styles.locationContent}>
-              <Text style={styles.locationName}>{location.name}</Text>
-              <Text style={styles.locationAddress}>{location.address}</Text>
-            </View>
-          </Pressable>
-        ))}
+        {loadingSavedLocations ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading saved locations...</Text>
+          </View>
+        ) : (
+          savedLocations.map((location) => (
+            <Pressable
+              key={location.id}
+              style={[styles.locationItem, location.isPlaceholder && styles.placeholderItem]}
+              onPress={() => {
+                // Skip if placeholder (location not set)
+                if (location.isPlaceholder) {
+                  return;
+                }
+                // Handle location selection with coordinates if available
+                const locationData = {
+                  address: location.address,
+                  name: location.name,
+                  ...(location.coordinates && { coordinates: location.coordinates })
+                };
+
+                if (!startLocation) {
+                  setStartLocation(locationData);
+                } else if (!destination) {
+                  setDestination(locationData);
+                }
+              }}
+              disabled={location.isPlaceholder}
+            >
+              <View style={styles.locationIcon}>
+                <Ionicons name={location.icon} size={20} color={location.isPlaceholder ? colors.muted : colors.text} />
+              </View>
+              <View style={styles.locationContent}>
+                <Text style={[styles.locationName, location.isPlaceholder && styles.placeholderName]}>{location.name}</Text>
+                <Text style={[styles.locationAddress, location.isPlaceholder && styles.placeholderAddress]}>{location.address}</Text>
+              </View>
+            </Pressable>
+          ))
+        )}
 
         {/* More from recent history */}
         <Pressable style={styles.moreButton}>
@@ -269,5 +252,25 @@ const styles = StyleSheet.create({
     ...type.body,
     color: colors.primary,
     fontWeight: "600"
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+    gap: spacing.sm
+  },
+  loadingText: {
+    ...type.body,
+    color: colors.muted
+  },
+  placeholderItem: {
+    opacity: 0.6
+  },
+  placeholderName: {
+    color: colors.muted
+  },
+  placeholderAddress: {
+    fontStyle: "italic"
   }
 });
