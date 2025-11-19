@@ -1,10 +1,18 @@
-import React from "react";
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import React, { useEffect } from "react";
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from "@react-navigation/native"; // <--- CHANGED (Added useNavigationContainerRef)
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+
+// 1. IMPORT DEEP LINKING UTILS (NEW)
+import * as Linking from 'expo-linking'; 
+
+// 2. IMPORT AMPLIFY & CONFIG (NEW)
+import { Amplify } from 'aws-amplify';
+import { Hub } from 'aws-amplify/utils';
+import awsExports from './src/aws-exports';
 
 import SplashScreen from "./src/screens/auth/SplashScreen";
 import OnboardingScreen from "./src/screens/auth/OnboardingScreen";
@@ -33,14 +41,28 @@ import NotificationSettingsScreen from "./src/screens/settings/NotificationSetti
 import TollPassScreen from './src/screens/settings/TollPassScreen';
 import EditProfileScreen from './src/screens/main/EditProfileScreen';
 
-
-
-
 import { colors } from "./src/theme/tokens";
+
+// 3. CONFIGURE AMPLIFY (NEW)
+Amplify.configure(awsExports);
 
 const queryClient = new QueryClient();
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// 4. DEFINE LINKING CONFIGURATION (NEW)
+// This tells the app how to handle the "weatherdriver://" redirect from Google
+const linking = {
+  prefixes: [
+    Linking.createURL('/'), // Handles "exp://" for local development
+    'weatherdriver://'      // Handles production builds
+  ],
+  config: {
+    screens: {
+      // You can map paths here if needed, but not strictly required for Auth
+    }
+  }
+};
 
 function MainTabs() {
   return (
@@ -77,9 +99,38 @@ const navTheme = {
 };
 
 export default function App() {
+  // 5. CREATE NAVIGATION REFERENCE (NEW)
+  // We need this to navigate *programmatically* when the Hub listener fires
+  const navigationRef = useNavigationContainerRef();
+
+  // 6. LISTEN FOR AUTH EVENTS (NEW)
+  useEffect(() => {
+    const unsubscribe = Hub.listen('auth', ({ payload }) => {
+      // This event fires when Google successfully redirects back to the app
+      if (payload.event === 'signedIn') {
+        console.log('Social Login Successful via Hub, navigating to Main...');
+        
+        // If navigation is ready, force the user to the Main screen
+        if (navigationRef.isReady()) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [navigationRef]);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer theme={navTheme}>
+      {/* 7. PASS LINKING AND REF TO NAVIGATION CONTAINER (CHANGED) */}
+      <NavigationContainer 
+        theme={navTheme} 
+        linking={linking} 
+        ref={navigationRef}
+      >
         <StatusBar style="light" />
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           <RootStack.Screen name="Splash" component={SplashScreen} />

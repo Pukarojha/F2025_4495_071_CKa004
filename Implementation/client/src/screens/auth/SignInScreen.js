@@ -1,16 +1,33 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+// 1. Import Amplify Auth
+import { signInWithRedirect } from 'aws-amplify/auth';
+
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
 import { colors, spacing, type, radius, shadows } from "../../theme/tokens";
+
+const SUPPORTED_PROVIDERS = ['Google'];
 
 export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSocialLogin = (provider) => {
-    alert(`${provider} login clicked! (Not implemented yet)`);
+  const handleSocialLogin = async (provider) => {
+    // 2. Check if provider is supported
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      Alert.alert("Coming Soon", `${provider} login is currently under development.`);
+      return;
+    }
+
+    try {
+      // 3. Trigger Google Login
+      await signInWithRedirect({ provider });
+    } catch (error) {
+      console.error(`${provider} Login Error:`, error);
+      Alert.alert("Login Failed", error.message);
+    }
   };
 
   const isEmailValid = email.includes("@") && email.includes(".");
@@ -53,14 +70,19 @@ export default function SignInScreen({ navigation }) {
       <Text style={styles.orText}>Or Login with</Text>
 
       <View style={styles.socialContainer}>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Facebook")}>
-          <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+        {/* Facebook (Disabled) */}
+        <Pressable style={[styles.socialBtn, styles.disabledBtn]} onPress={() => handleSocialLogin("Facebook")}>
+          <Ionicons name="logo-facebook" size={20} color={colors.muted} />
         </Pressable>
+
+        {/* Google (Enabled) */}
         <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Google")}>
           <Text style={styles.googleText}>G</Text>
         </Pressable>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Apple")}>
-          <Ionicons name="logo-apple" size={20} color="#000" />
+
+        {/* Apple (Disabled) */}
+        <Pressable style={[styles.socialBtn, styles.disabledBtn]} onPress={() => handleSocialLogin("Apple")}>
+          <Ionicons name="logo-apple" size={20} color={colors.muted} />
         </Pressable>
       </View>
 
@@ -75,67 +97,16 @@ export default function SignInScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-    paddingTop: spacing.xxl
-  },
-  h1: {
-    ...type.h1,
-    color: colors.text,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xxl
-  },
-  inputField: {
-    marginBottom: spacing.md
-  },
-  forgotPassword: {
-    ...type.body,
-    color: colors.primary,
-    textAlign: "right",
-    marginBottom: spacing.xxl,
-    marginTop: spacing.sm
-  },
-  loginBtn: {
-    marginBottom: spacing.lg,
-    ...shadows.main
-  },
-  orText: {
-    ...type.body,
-    color: colors.muted,
-    textAlign: "center",
-    marginVertical: spacing.lg
-  },
-  socialContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.md,
-    marginBottom: spacing.xxl
-  },
-  socialBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface,
-    ...shadows.main
-  },
-  googleText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#DB4437"
-  },
-  signUpLink: {
-    ...type.body,
-    color: colors.muted,
-    textAlign: "center"
-  },
-  signUpLinkBold: {
-    fontWeight: "600",
-    color: colors.text
-  }
+  root: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, paddingTop: spacing.xxl },
+  h1: { ...type.h1, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.xxl },
+  inputField: { marginBottom: spacing.md },
+  forgotPassword: { ...type.body, color: colors.primary, textAlign: "right", marginBottom: spacing.xxl, marginTop: spacing.sm },
+  loginBtn: { marginBottom: spacing.lg, ...shadows.main },
+  orText: { ...type.body, color: colors.muted, textAlign: "center", marginVertical: spacing.lg },
+  socialContainer: { flexDirection: "row", justifyContent: "center", gap: spacing.md, marginBottom: spacing.xxl },
+  socialBtn: { width: 48, height: 48, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderLight, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, ...shadows.main },
+  disabledBtn: { backgroundColor: '#f0f0f0', borderColor: '#ddd', shadowOpacity: 0 },
+  googleText: { fontSize: 18, fontWeight: "600", color: "#DB4437" },
+  signUpLink: { ...type.body, color: colors.muted, textAlign: "center" },
+  signUpLinkBold: { fontWeight: "600", color: colors.text }
 });
