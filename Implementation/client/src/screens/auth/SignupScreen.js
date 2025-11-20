@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-// 1. Import Amplify Auth
-import { signInWithRedirect } from 'aws-amplify/auth';
+import { signInWithRedirect } from "aws-amplify/auth";
 
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
 import { colors, spacing, type, radius, shadows } from "../../theme/tokens";
 
-// 2. Define supported providers
-const SUPPORTED_PROVIDERS = ['Google'];
+// Supported social providers
+const SUPPORTED_PROVIDERS = ["Google"];
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -17,24 +16,26 @@ export default function SignUpScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSocialLogin = async (provider) => {
-    // 3. Check if provider is supported
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
-      Alert.alert("Coming Soon", `${provider} login is currently under development.`);
+      Alert.alert(
+        "Coming Soon",
+        `${provider} login is currently under development.`
+      );
       return;
     }
 
     try {
-      // 4. Trigger Google Login
       await signInWithRedirect({ provider });
     } catch (error) {
       console.error(`${provider} Login Error:`, error);
-      Alert.alert("Login Failed", error.message);
+      Alert.alert("Login Failed", error.message || "Something went wrong");
     }
   };
 
   const isEmailValid = email.includes("@") && email.includes(".");
   const isPasswordValid = password.length >= 8;
-  const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
+  const doPasswordsMatch =
+    password === confirmPassword && confirmPassword.length > 0;
 
   return (
     <View style={styles.root}>
@@ -83,21 +84,28 @@ export default function SignUpScreen({ navigation }) {
 
       <Text style={styles.orText}>Or Register with</Text>
 
+      {/* Updated Google button */}
       <View style={styles.socialContainer}>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Facebook")}>
-          <Ionicons name="logo-facebook" size={20} color="#1877F2" />
-        </Pressable>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Google")}>
-          <Text style={styles.googleText}>G</Text>
-        </Pressable>
-        <Pressable style={styles.socialBtn} onPress={() => handleSocialLogin("Apple")}>
-          <Ionicons name="logo-apple" size={20} color="#000" />
+        <Pressable
+           style={[ styles.googleBtn, { backgroundColor: colors.primary } ]}
+          onPress={() => handleSocialLogin("Google")}
+        >
+          <Ionicons
+            name="logo-google"
+            size={22}
+            color="#FFFFFF"
+            style={styles.googleIcon}
+          />
+          <Text style={styles.googleBtnText}>Sign up with Google</Text>
         </Pressable>
       </View>
 
       <Text style={styles.loginLink}>
         Already have an account?{" "}
-        <Text style={styles.loginLinkBold} onPress={() => navigation.navigate("SignIn")}>
+        <Text
+          style={styles.loginLinkBold}
+          onPress={() => navigation.navigate("SignIn")}
+        >
           Log in
         </Text>
       </Text>
@@ -110,57 +118,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
     padding: spacing.lg,
-    paddingTop: spacing.xxl
+    paddingTop: spacing.xxl,
   },
   h1: {
     ...type.h1,
     color: colors.text,
     marginTop: spacing.xl,
-    marginBottom: spacing.xxl
+    marginBottom: spacing.xxl,
   },
   inputField: {
-    marginBottom: spacing.md
+    marginBottom: spacing.md,
   },
   signUpBtn: {
     marginTop: spacing.lg,
     marginBottom: spacing.lg,
-    ...shadows.main
+    ...shadows.main,
   },
   orText: {
     ...type.body,
     color: colors.muted,
     textAlign: "center",
-    marginVertical: spacing.lg
+    marginVertical: spacing.lg,
   },
   socialContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: spacing.md,
-    marginBottom: spacing.xxl
+    marginBottom: spacing.xxl,
   },
-  socialBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+
+  // New Google button styles
+  googleBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surface,
-    ...shadows.main
+    paddingHorizontal: spacing.lg,
+    height: 48,
+    borderRadius: radius.md,
+    ...shadows.main,
   },
-  googleText: {
-    fontSize: 18,
+  googleIcon: {
+    marginRight: 8,
+  },
+  googleBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
     fontWeight: "600",
-    color: "#DB4437"
   },
+
   loginLink: {
     ...type.body,
     color: colors.muted,
-    textAlign: "center"
+    textAlign: "center",
   },
   loginLinkBold: {
     fontWeight: "600",
-    color: colors.text
-  }
+    color: colors.text,
+  },
 });
