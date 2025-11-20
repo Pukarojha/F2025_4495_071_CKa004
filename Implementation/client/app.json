@@ -2,52 +2,47 @@
   "expo": {
     "name": "Weather Driver",
     "slug": "weather-driver",
-    "scheme": "weatherdriver",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "scheme": "weatherdriver",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B0B10"
-    },
-    "updates": {
-      "fallbackToCacheTimeout": 0
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
-      "**/*" 
+      "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "config": {
-        "googleMapsApiKey": "AIzaSyAVahG7GQUf3dQaUjT3hEQvBYliKTkikUg"
-      }
+      "bundleIdentifier": "com.pukar9.weatherdriver"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0B0B10"
+        "backgroundColor": "#ffffff"
       },
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyAVahG7GQUf3dQaUjT3hEQvBYliKTkikUg"
-        }
-      },
-      "package": "com.anonymous.weatherdriver"
+      "package": "com.pukar9.weatherdriver"
     },
     "web": {
-      "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fc43e4df-11a2-4001-9902-97c4b6b2550e"
+      }
+    }
   }
 }

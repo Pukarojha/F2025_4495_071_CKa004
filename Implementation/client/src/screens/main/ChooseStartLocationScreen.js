@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { colors, spacing, radius, type } from "../../theme/tokens";
 import { reverseGeocode, getPlaceAutocomplete, getPlaceDetails } from "../../services/googleMapsService";
+import { useSavedLocations } from "../../hooks/useSavedLocations";
 
 export default function ChooseStartLocationScreen({ navigation, route }) {
   const [searchText, setSearchText] = useState("");
@@ -11,6 +12,15 @@ export default function ChooseStartLocationScreen({ navigation, route }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const { onSelectLocation } = route.params || {};
+  const { savedLocations, loading: loadingSavedLocations, refreshLocations } = useSavedLocations();
+
+  // Refresh saved locations when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      refreshLocations();
+    });
+    return unsubscribe;
+  }, [navigation, refreshLocations]);
 
   // Debounced search for autocomplete
   useEffect(() => {
@@ -49,54 +59,20 @@ export default function ChooseStartLocationScreen({ navigation, route }) {
     return () => clearTimeout(delaySearch);
   }, [searchText]);
 
-  const savedLocations = [
-    {
-      id: 1,
-      name: "Home",
-      address: "101 Roehampton Avenue, Toronto, ON",
-      icon: "home"
-    },
-    {
-      id: 2,
-      name: "School",
-      address: "Humber College Blvd",
-      icon: "school"
-    },
-    {
-      id: 3,
-      name: "Work",
-      address: "Set once and go",
-      icon: "briefcase"
-    },
-    {
-      id: 4,
-      name: "60 East Beaver Creek Road",
-      address: "Richmond Hill, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 5,
-      name: "Humber College Blvd",
-      address: "Etobicoke, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 6,
-      name: "#2256 Costco",
-      address: "Islington, Etobicoke, ON",
-      icon: "time-outline"
-    },
-    {
-      id: 7,
-      name: "10 Tobermory Drive",
-      address: "Toronto, ON",
-      icon: "time-outline"
-    }
-  ];
-
   const handleSelectLocation = (location) => {
+    // Skip if placeholder (location not set)
+    if (location.isPlaceholder) {
+      return;
+    }
+
     if (onSelectLocation) {
-      onSelectLocation(location.name);
+      // Pass full location data with coordinates if available
+      const locationData = {
+        address: location.address,
+        name: location.name,
+        ...(location.coordinates && { coordinates: location.coordinates })
+      };
+      onSelectLocation(locationData);
     }
     navigation.goBack();
   };
@@ -290,21 +266,29 @@ export default function ChooseStartLocationScreen({ navigation, route }) {
           <>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Saved locations</Text>
-              {savedLocations.map((location) => (
-                <Pressable
-                  key={location.id}
-                  style={styles.locationItem}
-                  onPress={() => handleSelectLocation(location)}
-                >
-                  <View style={styles.locationIcon}>
-                    <Ionicons name={location.icon} size={20} color={colors.text} />
-                  </View>
-                  <View style={styles.locationContent}>
-                    <Text style={styles.locationName}>{location.name}</Text>
-                    <Text style={styles.locationAddress}>{location.address}</Text>
-                  </View>
-                </Pressable>
-              ))}
+              {loadingSavedLocations ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.loadingText}>Loading saved locations...</Text>
+                </View>
+              ) : (
+                savedLocations.map((location) => (
+                  <Pressable
+                    key={location.id}
+                    style={[styles.locationItem, location.isPlaceholder && styles.placeholderItem]}
+                    onPress={() => handleSelectLocation(location)}
+                    disabled={location.isPlaceholder}
+                  >
+                    <View style={styles.locationIcon}>
+                      <Ionicons name={location.icon} size={20} color={location.isPlaceholder ? colors.muted : colors.text} />
+                    </View>
+                    <View style={styles.locationContent}>
+                      <Text style={[styles.locationName, location.isPlaceholder && styles.placeholderName]}>{location.name}</Text>
+                      <Text style={[styles.locationAddress, location.isPlaceholder && styles.placeholderAddress]}>{location.address}</Text>
+                    </View>
+                  </Pressable>
+                ))
+              )}
             </View>
 
             {/* More from recent history */}
@@ -474,5 +458,25 @@ const styles = StyleSheet.create({
   noResultsText: {
     ...type.body,
     color: colors.muted
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xl,
+    gap: spacing.sm
+  },
+  loadingText: {
+    ...type.body,
+    color: colors.muted
+  },
+  placeholderItem: {
+    opacity: 0.6
+  },
+  placeholderName: {
+    color: colors.muted
+  },
+  placeholderAddress: {
+    fontStyle: "italic"
   }
 });

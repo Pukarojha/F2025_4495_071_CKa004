@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, ActivityIndicator, StyleSheet, Text, Pressable, TextInput, Modal, ScrollView } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text, Pressable, TextInput, Modal, ScrollView, Image, Alert } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 import * as Location from "expo-location";
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import RouteModal from "../../components/RouteModal";
 import PreferencesScreen from "./PreferencesScreen";
@@ -27,6 +28,10 @@ export default function MapScreen({ navigation }) {
   const [activeFilter, setActiveFilter] = useState("Saved");
   const [showTraffic, setShowTraffic] = useState(false);
   const [showTransit, setShowTransit] = useState(false);
+  const [profileImage, setProfileImage] = useState(require('../../../assets/profile_avatar.jpg'));
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [profileName, setProfileName] = useState("Cheguevaran");
+  const [profileEmail, setProfileEmail] = useState("Cheguevaran2@gmail.com");
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +63,64 @@ export default function MapScreen({ navigation }) {
   const handleMarkerPress = (alert) => {
     // Show route when user taps on a marker
     setShowRouteModal(true);
+  };
+
+  const pickImageFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to select a photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+    setShowImagePickerModal(false);
+  };
+
+  const takePhotoWithCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Sorry, we need camera permissions to take a photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+    setShowImagePickerModal(false);
+  };
+
+  const handleImagePickerOption = (option) => {
+    if (option === 'gallery') {
+      pickImageFromGallery();
+    } else if (option === 'camera') {
+      takePhotoWithCamera();
+    } else {
+      setShowImagePickerModal(false);
+    }
+  };
+
+  const handleProfileUpdate = (updatedProfile) => {
+    if (updatedProfile.fullName) {
+      setProfileName(updatedProfile.fullName);
+    }
+    if (updatedProfile.email) {
+      setProfileEmail(updatedProfile.email);
+    }
   };
 
   return (
@@ -104,9 +167,7 @@ export default function MapScreen({ navigation }) {
             <Ionicons name="mic" size={20} color="#666" />
           </Pressable>
           <Pressable style={styles.profileAvatarButton} onPress={() => setShowProfileMenu(true)}>
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileAvatarText}>CH</Text>
-            </View>
+            <Image source={profileImage} style={styles.profileAvatarImage} />
           </Pressable>
         </Pressable>
 
@@ -235,12 +296,29 @@ export default function MapScreen({ navigation }) {
             {/* Profile Header */}
             <View style={styles.profileModalHeader}>
               <View style={styles.profileImageContainer}>
-                <View style={styles.profileImage}>
-                  <Text style={styles.profileImageText}>CH</Text>
+                <View style={styles.profileImageWrapper}>
+                  <Image source={profileImage} style={styles.profileImageLarge} />
+                  <Pressable
+                    style={styles.cameraIconButton}
+                    onPress={() => setShowImagePickerModal(true)}
+                  >
+                    <Ionicons name="camera" size={16} color="#fff" />
+                  </Pressable>
+                  <Pressable
+                    style={styles.editIconButton}
+                    onPress={() => {
+                      setShowProfileMenu(false);
+                      navigation.navigate("EditProfile", {
+                        onProfileUpdate: handleProfileUpdate
+                      });
+                    }}
+                  >
+                    <Ionicons name="pencil" size={14} color="#fff" />
+                  </Pressable>
                 </View>
               </View>
-              <Text style={styles.profileModalName}>Cheguevaran</Text>
-              <Text style={styles.profileModalEmail}>Cheguevaran2@gmail.com</Text>
+              <Text style={styles.profileModalName}>{profileName}</Text>
+              <Text style={styles.profileModalEmail}>{profileEmail}</Text>
             </View>
 
             {/* Menu Items */}
@@ -479,6 +557,43 @@ export default function MapScreen({ navigation }) {
         origin="Phoenix"
         destination="Las Vegas"
       />
+
+      {/* Image Picker Modal */}
+      <Modal
+        visible={showImagePickerModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImagePickerModal(false)}
+      >
+        <View style={styles.imagePickerModalContainer}>
+          <View style={styles.imagePickerModal}>
+            <Text style={styles.imagePickerTitle}>Change Profile Photo</Text>
+
+            <Pressable
+              style={styles.imagePickerOption}
+              onPress={() => handleImagePickerOption('gallery')}
+            >
+              <Ionicons name="images" size={24} color={colors.primary} />
+              <Text style={styles.imagePickerOptionText}>Choose from Gallery</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.imagePickerOption}
+              onPress={() => handleImagePickerOption('camera')}
+            >
+              <Ionicons name="camera" size={24} color={colors.primary} />
+              <Text style={styles.imagePickerOptionText}>Take Photo</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.imagePickerCancelButton}
+              onPress={() => setShowImagePickerModal(false)}
+            >
+              <Text style={styles.imagePickerCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -543,6 +658,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "600"
+  },
+  profileAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16
   },
   filterChipsContainer: {
     marginTop: spacing.sm
@@ -634,6 +754,11 @@ const styles = StyleSheet.create({
   profileImageContainer: {
     marginBottom: spacing.md
   },
+  profileImageWrapper: {
+    position: "relative",
+    width: 80,
+    height: 80
+  },
   profileImage: {
     width: 80,
     height: 80,
@@ -641,6 +766,37 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center"
+  },
+  profileImageLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40
+  },
+  cameraIconButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff"
+  },
+  editIconButton: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#666",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff"
   },
   profileImageText: {
     color: "#fff",
@@ -858,6 +1014,51 @@ const styles = StyleSheet.create({
   mapDetailCardLabel: {
     ...type.caption,
     color: colors.text,
+    fontWeight: "500"
+  },
+  imagePickerModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  imagePickerModal: {
+    backgroundColor: "#fff",
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    width: "80%",
+    alignItems: "center"
+  },
+  imagePickerTitle: {
+    ...type.h3,
+    color: colors.text,
+    marginBottom: spacing.xl,
+    fontWeight: "600"
+  },
+  imagePickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    width: "100%",
+    gap: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.sm
+  },
+  imagePickerOptionText: {
+    ...type.body,
+    color: colors.text,
+    fontWeight: "500"
+  },
+  imagePickerCancelButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl
+  },
+  imagePickerCancelText: {
+    ...type.body,
+    color: colors.muted,
     fontWeight: "500"
   }
 });

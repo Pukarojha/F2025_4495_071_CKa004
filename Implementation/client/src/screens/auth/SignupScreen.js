@@ -1,17 +1,35 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+// 1. Import Amplify Auth
+import { signInWithRedirect } from 'aws-amplify/auth';
+
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
 import { colors, spacing, type, radius, shadows } from "../../theme/tokens";
+
+// 2. Define supported providers
+const SUPPORTED_PROVIDERS = ['Google'];
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSocialLogin = (provider) => {
-    alert(`${provider} login clicked! (Not implemented yet)`);
+  const handleSocialLogin = async (provider) => {
+    // 3. Check if provider is supported
+    if (!SUPPORTED_PROVIDERS.includes(provider)) {
+      Alert.alert("Coming Soon", `${provider} login is currently under development.`);
+      return;
+    }
+
+    try {
+      // 4. Trigger Google Login
+      await signInWithRedirect({ provider });
+    } catch (error) {
+      console.error(`${provider} Login Error:`, error);
+      Alert.alert("Login Failed", error.message);
+    }
   };
 
   const isEmailValid = email.includes("@") && email.includes(".");

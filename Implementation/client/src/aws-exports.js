@@ -1,16 +1,32 @@
-import { Amplify } from 'aws-amplify';
+// This file exports the configuration object for Amplify V6
+// We do NOT call Amplify.configure() here, we just export the settings.
 
-Amplify.configure({
+const awsExports = {
   Auth: {
-    region: 'us-east-2',
-    userPoolId: '302933091929',
-    userPoolWebClientId: '46ghrvb98nfhtna8lc9kqcojb2',
-    oauth: {
-      domain: 'YOUR_COGNITO_DOMAIN.auth.YOUR_REGION.amazoncognito.com',
-      scope: ['openid', 'email', 'profile'],
-      redirectSignIn: 'exp://localhost:19000/--/',
-      redirectSignOut: 'exp://localhost:19000/--/',
-      responseType: 'code',
-    },
-  },
-});
+    Cognito: {
+      // Your specific User Pool IDs
+      userPoolId: 'us-east-2_ytDRYiJVg',
+      userPoolClientId: '46ghrvb98nfhtna8lc9kqcojb2',
+      
+      loginWith: {
+        oauth: {
+          // 1. Domain must NOT have "https://"
+          domain: 'weatherdriver.auth.us-east-2.amazoncognito.com',
+          
+          // 2. Scopes matching your AWS Console
+          scopes: ['openid', 'email', 'profile'],
+          
+          // 3. Redirects must be ARRAYS, not strings.
+          // We include both the Expo dev URL and your production/standalone scheme.
+          redirectSignIn: ['exp://localhost:19000/--/', 'weatherdriver://'],
+          redirectSignOut: ['exp://localhost:19000/--/', 'weatherdriver://'],
+          
+          responseType: 'code',
+          providers: ['Google']
+        }
+      }
+    }
+  }
+};
+
+export default awsExports;
