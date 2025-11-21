@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native"; // Added Image to imports
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithRedirect } from "aws-amplify/auth";
 
@@ -67,19 +67,21 @@ export default function SignInScreen({ navigation }) {
         style={styles.loginBtn}
       />
 
-      <Text style={styles.orText}>Or Login with</Text>
+      <Text style={styles.orText}>Or continue with</Text>
 
       {/* Updated Google social login button */}
       <View style={styles.socialContainer}>
         <Pressable
-          style={[styles.googleBtn, { backgroundColor: colors.primary }]}
+          style={({ pressed }) => [
+            styles.googleBtn,
+            pressed && styles.googleBtnPressed,
+          ]}
           onPress={() => handleSocialLogin("Google")}
         >
-          <Ionicons
-            name="logo-google"
-            size={22}
-            color="#FFFFFF"
-            style={styles.googleIcon}
+          {/* REPLACED Ionicons with Official Google Logo Image */}
+          <Image 
+            source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
+            style={styles.googleIconImage}
           />
           <Text style={styles.googleBtnText}>Sign in with Google</Text>
         </Pressable>
@@ -130,6 +132,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: "center",
     marginVertical: spacing.lg,
+    fontSize: 14,
   },
   socialContainer: {
     flexDirection: "row",
@@ -137,24 +140,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
 
-  // New Google button styles similar to SignUpScreen
+  // --- STYLES FOR OFFICIAL GOOGLE LOOK ---
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
-    height: 48,
+    height: 52, 
+    width: "100%", 
     borderRadius: radius.md,
-    ...shadows.main,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E0E0E0", 
+    // Soft shadow
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  googleIcon: {
-    marginRight: 8,
+  googleBtnPressed: {
+    backgroundColor: "#F5F5F5", 
+    elevation: 1,
+  },
+  googleIconImage: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+    resizeMode: 'contain'
   },
   googleBtnText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
+    color: "#1F2937", 
+    fontSize: 16,
+    fontWeight: "600", // Semi-bold looks better
+    letterSpacing: 0.2,
   },
+  // --------------------------------------
 
   signUpLink: {
     ...type.body,
