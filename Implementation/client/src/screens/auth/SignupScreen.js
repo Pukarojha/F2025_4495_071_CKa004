@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native"; // Added Image import
 import { signInWithRedirect } from "aws-amplify/auth";
 
 import WDButton from "../../components/ui/WDButton";
@@ -84,17 +83,18 @@ export default function SignUpScreen({ navigation }) {
 
       <Text style={styles.orText}>Or Register with</Text>
 
-      {/* Updated Google button */}
+      {/* Updated Google button with Official Logo */}
       <View style={styles.socialContainer}>
         <Pressable
-           style={[ styles.googleBtn, { backgroundColor: colors.primary } ]}
+          style={({ pressed }) => [
+            styles.googleBtn,
+            pressed && styles.googleBtnPressed,
+          ]}
           onPress={() => handleSocialLogin("Google")}
         >
-          <Ionicons
-            name="logo-google"
-            size={22}
-            color="#FFFFFF"
-            style={styles.googleIcon}
+          <Image
+            source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
+            style={styles.googleIconImage}
           />
           <Text style={styles.googleBtnText}>Sign up with Google</Text>
         </Pressable>
@@ -146,24 +146,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
 
-  // New Google button styles
+  // --- CONSISTENT GOOGLE BUTTON STYLES ---
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
-    height: 48,
+    height: 52,
+    width: "100%",
     borderRadius: radius.md,
-    ...shadows.main,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    // Soft shadow
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  googleIcon: {
-    marginRight: 8,
+  googleBtnPressed: {
+    backgroundColor: "#F5F5F5",
+    elevation: 1,
+  },
+  googleIconImage: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+    resizeMode: "contain",
   },
   googleBtnText: {
-    color: "#FFFFFF",
-    fontSize: 15,
+    color: "#1F2937",
+    fontSize: 16,
     fontWeight: "600",
+    letterSpacing: 0.2,
   },
+  // --------------------------------------
 
   loginLink: {
     ...type.body,
