@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native"; // Added Image import
-import { signInWithRedirect } from "aws-amplify/auth";
+import { View, Text, StyleSheet, Pressable, Alert, Image, ActivityIndicator } from "react-native";
+import { signInWithRedirect, signUp, confirmSignUp } from "aws-amplify/auth";
 
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
@@ -13,16 +13,18 @@ export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Verification State
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // --- SOCIAL LOGIN LOGIC ---
   const handleSocialLogin = async (provider) => {
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
-      Alert.alert(
-        "Coming Soon",
-        `${provider} login is currently under development.`
-      );
+      Alert.alert("Coming Soon", `${provider} login is currently under development.`);
       return;
     }
-
     try {
       await signInWithRedirect({ provider });
     } catch (error) {
@@ -31,11 +33,89 @@ export default function SignUpScreen({ navigation }) {
     }
   };
 
+  // --- MANUAL SIGN UP LOGIC ---
+  const handleSignUp = async () => {
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const { nextStep } = await signUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: { email },
+          autoSignIn: true,
+        },
+      });
+
+      if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
+        setPendingVerification(true);
+        Alert.alert("Verify Email", `We sent a code to ${email}`);
+      } else if (nextStep.signUpStep === 'DONE') {
+        navigation.replace("Main");
+      }
+    } catch (error) {
+      Alert.alert("Sign Up Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- VERIFICATION LOGIC ---
+  const handleVerification = async () => {
+    setLoading(true);
+    try {
+      await confirmSignUp({
+        username: email,
+        confirmationCode: verificationCode
+      });
+      Alert.alert("Success", "Account verified! Please log in.");
+      navigation.replace("SignIn");
+    } catch (error) {
+      Alert.alert("Verification Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isEmailValid = email.includes("@") && email.includes(".");
   const isPasswordValid = password.length >= 8;
-  const doPasswordsMatch =
-    password === confirmPassword && confirmPassword.length > 0;
+  const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
+  // --- RENDER VERIFICATION SCREEN IF PENDING ---
+  if (pendingVerification) {
+    return (
+      <View style={styles.root}>
+        <Text style={styles.h1}>Verify Email</Text>
+        <Text style={styles.orText}>Enter the code sent to {email}</Text>
+        
+        <WDInput
+          label="Confirmation Code"
+          placeholder="123456"
+          value={verificationCode}
+          onChangeText={setVerificationCode}
+          keyboardType="number-pad"
+          style={styles.inputField}
+        />
+        
+        <WDButton
+          label={loading ? "Verifying..." : "Confirm"}
+          onPress={handleVerification}
+          style={styles.signUpBtn}
+          disabled={loading}
+        />
+        
+        <Pressable onPress={() => setPendingVerification(false)}>
+          <Text style={styles.loginLinkBold}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // --- RENDER SIGN UP SCREEN ---
   return (
     <View style={styles.root}>
       <Text style={styles.h1}>Sign up</Text>
@@ -76,14 +156,14 @@ export default function SignUpScreen({ navigation }) {
       />
 
       <WDButton
-        label="Sign up"
-        onPress={() => navigation.replace("Main")}
+        label={loading ? "Creating Account..." : "Sign up"}
+        onPress={handleSignUp}
         style={styles.signUpBtn}
+        disabled={loading}
       />
 
       <Text style={styles.orText}>Or Register with</Text>
 
-      {/* Updated Google button with Official Logo */}
       <View style={styles.socialContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -145,8 +225,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.xxl,
   },
-
-  // --- CONSISTENT GOOGLE BUTTON STYLES ---
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -158,7 +236,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E0E0E0",
-    // Soft shadow
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -181,8 +258,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.2,
   },
-  // --------------------------------------
-
   loginLink: {
     ...type.body,
     color: colors.muted,

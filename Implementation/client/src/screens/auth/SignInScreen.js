@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native"; // Added Image to imports
-import { Ionicons } from "@expo/vector-icons";
-import { signInWithRedirect } from "aws-amplify/auth";
+import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native";
+import { signInWithRedirect, signIn } from "aws-amplify/auth";
 
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
@@ -12,21 +11,44 @@ const SUPPORTED_PROVIDERS = ["Google"];
 export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // --- SOCIAL LOGIN LOGIC ---
   const handleSocialLogin = async (provider) => {
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
-      Alert.alert(
-        "Coming Soon",
-        `${provider} login is currently under development.`
-      );
+      Alert.alert("Coming Soon", `${provider} login is currently under development.`);
       return;
     }
-
     try {
       await signInWithRedirect({ provider });
     } catch (error) {
       console.error(`${provider} Login Error:`, error);
       Alert.alert("Login Failed", error.message || "Something went wrong");
+    }
+  };
+
+  // --- MANUAL LOGIN LOGIC ---
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { isSignedIn, nextStep } = await signIn({ username: email, password });
+      
+      if (isSignedIn) {
+        navigation.replace("Main");
+      } else {
+        // Handle other cases like New Password Required
+        Alert.alert("Login Info", `Next Step: ${nextStep.signInStep}`);
+      }
+    } catch (error) {
+      console.error("Sign In Error", error);
+      Alert.alert("Login Failed", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,14 +84,14 @@ export default function SignInScreen({ navigation }) {
       </Pressable>
 
       <WDButton
-        label="Log in"
-        onPress={() => navigation.replace("Main")}
+        label={loading ? "Logging in..." : "Log in"}
+        onPress={handleSignIn}
         style={styles.loginBtn}
+        disabled={loading}
       />
 
       <Text style={styles.orText}>Or continue with</Text>
 
-      {/* Updated Google social login button */}
       <View style={styles.socialContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -78,7 +100,6 @@ export default function SignInScreen({ navigation }) {
           ]}
           onPress={() => handleSocialLogin("Google")}
         >
-          {/* REPLACED Ionicons with Official Google Logo Image */}
           <Image 
             source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
             style={styles.googleIconImage}
@@ -139,8 +160,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.xxl,
   },
-
-  // --- STYLES FOR OFFICIAL GOOGLE LOOK ---
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -152,7 +171,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E0E0E0", 
-    // Soft shadow
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -172,11 +190,9 @@ const styles = StyleSheet.create({
   googleBtnText: {
     color: "#1F2937", 
     fontSize: 16,
-    fontWeight: "600", // Semi-bold looks better
+    fontWeight: "600", 
     letterSpacing: 0.2,
   },
-  // --------------------------------------
-
   signUpLink: {
     ...type.body,
     color: colors.muted,
