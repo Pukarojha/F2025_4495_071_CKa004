@@ -1,18 +1,23 @@
-import React, { useEffect } from "react";
-import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from "@react-navigation/native"; // <--- CHANGED (Added useNavigationContainerRef)
+import React, { useEffect, useState } from "react";
+// 1. Polyfills & Imports
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
+import * as Linking from 'expo-linking';
+import { Amplify } from 'aws-amplify';
+import { Hub } from 'aws-amplify/utils';
+import { getCurrentUser } from 'aws-amplify/auth'; // Import this
+import awsExports from './src/aws-exports';
+
+
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import { View, ActivityIndicator } from "react-native";
 
-// 1. IMPORT DEEP LINKING UTILS (NEW)
-import * as Linking from 'expo-linking'; 
 
-// 2. IMPORT AMPLIFY & CONFIG (NEW)
-import { Amplify } from 'aws-amplify';
-import { Hub } from 'aws-amplify/utils';
-import awsExports from './src/aws-exports';
 
 import SplashScreen from "./src/screens/auth/SplashScreen";
 import OnboardingScreen from "./src/screens/auth/OnboardingScreen";
@@ -43,24 +48,19 @@ import EditProfileScreen from './src/screens/main/EditProfileScreen';
 
 import { colors } from "./src/theme/tokens";
 
-// 3. CONFIGURE AMPLIFY (NEW)
 Amplify.configure(awsExports);
 
 const queryClient = new QueryClient();
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// 4. DEFINE LINKING CONFIGURATION (NEW)
-// This tells the app how to handle the "weatherdriver://" redirect from Google
 const linking = {
   prefixes: [
-    Linking.createURL('/'), // Handles "exp://" for local development
-    'weatherdriver://'      // Handles production builds
+    Linking.createURL('/'),
+    'weatherdriver://'
   ],
   config: {
-    screens: {
-      // You can map paths here if needed, but not strictly required for Auth
-    }
+    screens: {}
   }
 };
 
@@ -99,23 +99,36 @@ const navTheme = {
 };
 
 export default function App() {
-  // 5. CREATE NAVIGATION REFERENCE (NEW)
-  // We need this to navigate *programmatically* when the Hub listener fires
   const navigationRef = useNavigationContainerRef();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // 6. LISTEN FOR AUTH EVENTS (NEW)
   useEffect(() => {
+    // 1. Check if user is ALREADY logged in when app opens
+    const checkInitialAuth = async () => {
+      try {
+        await getCurrentUser();
+        console.log("User already signed in, redirecting to Main");
+        // We use a small timeout to ensure Nav container is ready
+        setTimeout(() => {
+          if (navigationRef.isReady()) {
+            navigationRef.reset({ index: 0, routes: [{ name: 'Main' }] });
+          }
+        }, 100);
+      } catch (err) {
+        console.log("User not signed in");
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkInitialAuth();
+
+    // 2. Listen for login events (e.g. from Google Redirect)
     const unsubscribe = Hub.listen('auth', ({ payload }) => {
-      // This event fires when Google successfully redirects back to the app
       if (payload.event === 'signedIn') {
-        console.log('Social Login Successful via Hub, navigating to Main...');
-        
-        // If navigation is ready, force the user to the Main screen
+        console.log('Hub: Signed In event received');
         if (navigationRef.isReady()) {
-          navigationRef.reset({
-            index: 0,
-            routes: [{ name: 'Main' }],
-          });
+          navigationRef.reset({ index: 0, routes: [{ name: 'Main' }] });
         }
       }
     });
@@ -123,9 +136,16 @@ export default function App() {
     return unsubscribe;
   }, [navigationRef]);
 
+  if (isCheckingAuth) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      {/* 7. PASS LINKING AND REF TO NAVIGATION CONTAINER (CHANGED) */}
       <NavigationContainer 
         theme={navTheme} 
         linking={linking} 

@@ -24,7 +24,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.pukar9.weatherdriver"
+      "package": "com.pukar9.weatherdriver",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAVahG7GQUf3dQaUjT3hEQvBYliKTkikUg"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
