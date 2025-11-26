@@ -1,10 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Image, ActivityIndicator } from "react-native";
-<<<<<<< HEAD
 import { signInWithRedirect, signUp, confirmSignUp, getCurrentUser } from "aws-amplify/auth";
-=======
-import { signInWithRedirect, signUp, confirmSignUp } from "aws-amplify/auth";
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
@@ -17,17 +13,30 @@ export default function SignUpScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
-<<<<<<< HEAD
-=======
   // Verification State
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
   const [pendingVerification, setPendingVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // 1. AUTO-REDIRECT: Check if user is already here when screen loads
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        await getCurrentUser();
+        console.log("User session found on load, redirecting...");
+        navigation.replace("Main");
+      } catch (err) {
+        // Not signed in, allow user to interact
+        setCheckingAuth(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // --- SOCIAL LOGIN LOGIC ---
   const handleSocialLogin = async (provider) => {
-    // SAFETY CHECK
+    // Safety check before triggering OAuth
     try {
       await getCurrentUser();
       navigation.replace("Main");
@@ -41,61 +50,16 @@ export default function SignUpScreen({ navigation }) {
     try {
       await signInWithRedirect({ provider });
     } catch (error) {
-      if (error.name === 'UserAlreadyAuthenticatedException') {
+      console.log("Social Login response:", error);
+      if (
+        error.name === 'UserAlreadyAuthenticatedException' || 
+        (error.message && error.message.includes('already a signed in user'))
+      ) {
         navigation.replace("Main");
       } else {
+        console.error("Social Login Error:", error);
         Alert.alert("Login Failed", error.message);
       }
-    }
-  };
-
-  const handleSignUp = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { nextStep } = await signUp({
-        username: email,
-        password,
-        options: {
-          userAttributes: { email },
-          autoSignIn: true,
-        },
-      });
-
-      if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
-        setPendingVerification(true);
-        Alert.alert("Verify Email", `We sent a code to ${email}`);
-      } else if (nextStep.signUpStep === 'DONE') {
-        navigation.replace("Main");
-      }
-    } catch (error) {
-      if (error.name === 'UserAlreadyAuthenticatedException') {
-        navigation.replace("Main");
-      } else {
-        Alert.alert("Sign Up Failed", error.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerification = async () => {
-    setLoading(true);
-    try {
-      await confirmSignUp({
-        username: email,
-        confirmationCode: verificationCode
-      });
-      Alert.alert("Success", "Account verified! Please log in.");
-      navigation.replace("SignIn");
-    } catch (error) {
-      Alert.alert("Verification Failed", error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -124,7 +88,14 @@ export default function SignUpScreen({ navigation }) {
         navigation.replace("Main");
       }
     } catch (error) {
-      Alert.alert("Sign Up Failed", error.message);
+      if (
+        error.name === 'UserAlreadyAuthenticatedException' || 
+        (error.message && error.message.includes('already a signed in user'))
+      ) {
+        navigation.replace("Main");
+      } else {
+        Alert.alert("Sign Up Failed", error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -150,21 +121,14 @@ export default function SignUpScreen({ navigation }) {
   const isEmailValid = email.includes("@") && email.includes(".");
   const isPasswordValid = password.length >= 8;
   const doPasswordsMatch = password === confirmPassword && confirmPassword.length > 0;
-<<<<<<< HEAD
 
-  if (pendingVerification) {
+  if (checkingAuth) {
     return (
-      <View style={styles.root}>
-        <Text style={styles.h1}>Verify Email</Text>
-        <Text style={styles.orText}>Enter the code sent to {email}</Text>
-        <WDInput label="Code" placeholder="123456" value={verificationCode} onChangeText={setVerificationCode} keyboardType="number-pad" style={styles.inputField} />
-        <WDButton label={loading ? "Verifying..." : "Confirm"} onPress={handleVerification} style={styles.signUpBtn} disabled={loading} />
-        <Pressable onPress={() => setPendingVerification(false)}><Text style={styles.loginLinkBold}>Go Back</Text></Pressable>
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
-=======
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 
   // --- RENDER VERIFICATION SCREEN IF PENDING ---
   if (pendingVerification) {
@@ -200,13 +164,6 @@ export default function SignUpScreen({ navigation }) {
   return (
     <View style={styles.root}>
       <Text style={styles.h1}>Sign up</Text>
-<<<<<<< HEAD
-      <WDInput label="Email" placeholder="example@gmail.com" value={email} onChangeText={setEmail} keyboardType="email-address" showValidation={email.length > 0} isValid={isEmailValid} style={styles.inputField} />
-      <WDInput label="Create a password" placeholder="must be 8 characters" value={password} onChangeText={setPassword} secureTextEntry={true} showPasswordToggle={true} showValidation={password.length > 0} isValid={isPasswordValid} style={styles.inputField} />
-      <WDInput label="Confirm password" placeholder="repeat password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={true} showPasswordToggle={true} showValidation={confirmPassword.length > 0} isValid={doPasswordsMatch} style={styles.inputField} />
-      <WDButton label={loading ? "Creating Account..." : "Sign up"} onPress={handleSignUp} style={styles.signUpBtn} disabled={loading} />
-      <Text style={styles.orText}>Or Register with</Text>
-=======
 
       <WDInput
         label="Email"
@@ -252,20 +209,36 @@ export default function SignUpScreen({ navigation }) {
 
       <Text style={styles.orText}>Or Register with</Text>
 
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
       <View style={styles.socialContainer}>
-        <Pressable style={({ pressed }) => [styles.googleBtn, pressed && styles.googleBtnPressed]} onPress={() => handleSocialLogin("Google")}>
-          <Image source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }} style={styles.googleIconImage} />
+        <Pressable
+          style={({ pressed }) => [
+            styles.googleBtn,
+            pressed && styles.googleBtnPressed,
+          ]}
+          onPress={() => handleSocialLogin("Google")}
+        >
+          <Image
+            source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
+            style={styles.googleIconImage}
+          />
           <Text style={styles.googleBtnText}>Sign up with Google</Text>
         </Pressable>
       </View>
-      <Text style={styles.loginLink}>Already have an account? <Text style={styles.loginLinkBold} onPress={() => navigation.navigate("SignIn")}>Log in</Text></Text>
+
+      <Text style={styles.loginLink}>
+        Already have an account?{" "}
+        <Text
+          style={styles.loginLinkBold}
+          onPress={() => navigation.navigate("SignIn")}
+        >
+          Log in
+        </Text>
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
   root: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, paddingTop: spacing.xxl },
   h1: { ...type.h1, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.xxl },
   inputField: { marginBottom: spacing.md },
@@ -278,79 +251,4 @@ const styles = StyleSheet.create({
   googleBtnText: { color: "#1F2937", fontSize: 16, fontWeight: "600", letterSpacing: 0.2 },
   loginLink: { ...type.body, color: colors.muted, textAlign: "center" },
   loginLinkBold: { fontWeight: "600", color: colors.text }
-=======
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-    paddingTop: spacing.xxl,
-  },
-  h1: {
-    ...type.h1,
-    color: colors.text,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xxl,
-  },
-  inputField: {
-    marginBottom: spacing.md,
-  },
-  signUpBtn: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.main,
-  },
-  orText: {
-    ...type.body,
-    color: colors.muted,
-    textAlign: "center",
-    marginVertical: spacing.lg,
-  },
-  socialContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: spacing.xxl,
-  },
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    width: "100%",
-    borderRadius: radius.md,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  googleBtnPressed: {
-    backgroundColor: "#F5F5F5",
-    elevation: 1,
-  },
-  googleIconImage: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
-    resizeMode: "contain",
-  },
-  googleBtnText: {
-    color: "#1F2937",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-  },
-  loginLink: {
-    ...type.body,
-    color: colors.muted,
-    textAlign: "center",
-  },
-  loginLinkBold: {
-    fontWeight: "600",
-    color: colors.text,
-  },
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 });

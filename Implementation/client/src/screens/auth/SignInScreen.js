@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Image, ActivityIndicator } from "react-native";
 import { signInWithRedirect, signIn, getCurrentUser } from "aws-amplify/auth";
-=======
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Image } from "react-native";
-import { signInWithRedirect, signIn } from "aws-amplify/auth";
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 
 import WDButton from "../../components/ui/WDButton";
 import WDInput from "../../components/ui/WDInput";
@@ -18,26 +12,24 @@ export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // 1. Auto-redirect if user is already here
+  // 1. AUTO-REDIRECT: Check if user is already here when screen loads
   useEffect(() => {
     const checkAuth = async () => {
       try {
         await getCurrentUser();
-        console.log("User session found, redirecting to Main...");
+        console.log("User session found on load, redirecting...");
         navigation.replace("Main");
       } catch (err) {
+        // Not signed in, allow user to interact
         setCheckingAuth(false);
       }
     };
     checkAuth();
   }, []);
-=======
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 
-  // --- SOCIAL LOGIN LOGIC ---
+  // --- SOCIAL LOGIN LOGIC (Google) ---
   const handleSocialLogin = async (provider) => {
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
       Alert.alert("Coming Soon", `${provider} login is currently under development.`);
@@ -46,22 +38,21 @@ export default function SignInScreen({ navigation }) {
     try {
       await signInWithRedirect({ provider });
     } catch (error) {
-      // 2. FIX: Check for existing session BEFORE logging error
-      // This prevents the Red Screen
+      console.log("Social Login response:", error);
+      // FIX: If already signed in, treat as success
       if (
         error.name === 'UserAlreadyAuthenticatedException' || 
         (error.message && error.message.includes('already a signed in user'))
       ) {
-        console.log("User already authenticated, redirecting...");
         navigation.replace("Main");
       } else {
-        // Only log REAL errors
         console.error("Social Login Error:", error);
         Alert.alert("Login Failed", error.message || "Something went wrong");
       }
     }
   };
 
+  // --- MANUAL LOGIN LOGIC (Email/Password) ---
   const handleSignIn = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please enter both email and password");
@@ -75,44 +66,20 @@ export default function SignInScreen({ navigation }) {
       if (isSignedIn) {
         navigation.replace("Main");
       } else {
+        // Handle cases like "New Password Required"
         Alert.alert("Login Info", `Next Step: ${nextStep.signInStep}`);
       }
     } catch (error) {
-      // 3. Same fix for manual login
+      console.error("Sign In Error", error);
+      // FIX: If already signed in, treat as success
       if (
         error.name === 'UserAlreadyAuthenticatedException' || 
         (error.message && error.message.includes('already a signed in user'))
       ) {
         navigation.replace("Main");
       } else {
-        console.error("Sign In Error", error);
         Alert.alert("Login Failed", error.message);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- MANUAL LOGIN LOGIC ---
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { isSignedIn, nextStep } = await signIn({ username: email, password });
-      
-      if (isSignedIn) {
-        navigation.replace("Main");
-      } else {
-        // Handle other cases like New Password Required
-        Alert.alert("Login Info", `Next Step: ${nextStep.signInStep}`);
-      }
-    } catch (error) {
-      console.error("Sign In Error", error);
-      Alert.alert("Login Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -196,21 +163,6 @@ export default function SignInScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  root: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, paddingTop: spacing.xxl },
-  h1: { ...type.h1, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.xxl },
-  inputField: { marginBottom: spacing.md },
-  forgotPassword: { ...type.body, color: colors.primary, textAlign: "right", marginBottom: spacing.xxl, marginTop: spacing.sm },
-  loginBtn: { marginBottom: spacing.lg, ...shadows.main },
-  orText: { ...type.body, color: colors.muted, textAlign: "center", marginVertical: spacing.lg, fontSize: 14 },
-  socialContainer: { flexDirection: "row", justifyContent: "center", marginBottom: spacing.xxl },
-  googleBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg, height: 52, width: "100%", borderRadius: radius.md, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E0E0E0", elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  googleBtnPressed: { backgroundColor: "#F5F5F5", elevation: 1 },
-  googleIconImage: { width: 20, height: 20, marginRight: 12, resizeMode: 'contain' },
-  googleBtnText: { color: "#1F2937", fontSize: 16, fontWeight: "600", letterSpacing: 0.2 },
-  signUpLink: { ...type.body, color: colors.muted, textAlign: "center" },
-  signUpLinkBold: { fontWeight: "600", color: colors.text }
-=======
   root: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -291,5 +243,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
   },
->>>>>>> 57e3e5076277ac8086914aec926a2c996648387f
 });

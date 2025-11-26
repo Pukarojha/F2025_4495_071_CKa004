@@ -46,7 +46,7 @@ const awsExports = {
           domain: 'weatherdriver.auth.us-east-2.amazoncognito.com',
           
           // 2. Scopes matching your AWS Console
-          scopes: ['openid', 'email', 'profile'],
+          scopes: ['openid', 'email', 'profile','aws.cognito.signin.user.admin'],
           
           // 3. Redirects must be ARRAYS, not strings.
           // We force the app to use the custom scheme to avoid "localhost" connection errors on physical devices.

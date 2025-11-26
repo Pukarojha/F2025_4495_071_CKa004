@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Weather Driver",
-    "slug": "weather-driver",
+    "name": "WeatherDriver",
+    "slug": "weatherdriver",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

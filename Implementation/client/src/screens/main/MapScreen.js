@@ -1,9 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, ActivityIndicator, StyleSheet, Text, Pressable, TextInput, Modal, ScrollView, Image, Alert } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text, Pressable, Modal, ScrollView, Image, Alert } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { CommonActions } from "@react-navigation/native"; // Import for navigation reset
+
+// --- AWS IMPORTS ---
+import { getCurrentUser, fetchUserAttributes, signOut } from 'aws-amplify/auth'; 
+
 import RouteModal from "../../components/RouteModal";
 import PreferencesScreen from "./PreferencesScreen";
 import SavedTripsScreen from "./SavedTripsScreen";
@@ -17,8 +22,6 @@ const SAMPLE = {
 export default function MapScreen({ navigation }) {
   const [region, setRegion] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
   const [showRouteModal, setShowRouteModal] = useState(false);
   const [activeMapTab, setActiveMapTab] = useState("Explore");
   const [mapType, setMapType] = useState("standard");
@@ -28,40 +31,97 @@ export default function MapScreen({ navigation }) {
   const [activeFilter, setActiveFilter] = useState("Saved");
   const [showTraffic, setShowTraffic] = useState(false);
   const [showTransit, setShowTransit] = useState(false);
-  const [profileImage, setProfileImage] = useState(require('../../../assets/profile_avatar.jpg'));
+  
+  // --- PROFILE STATE ---
+  const [profileImage, setProfileImage] = useState(require('../../../assets/profile_avatar.jpg')); 
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
-  const [profileName, setProfileName] = useState("Cheguevaran");
-  const [profileEmail, setProfileEmail] = useState("Cheguevaran2@gmail.com");
+  const [profileName, setProfileName] = useState("Guest"); 
+  const [profileEmail, setProfileEmail] = useState(""); 
+
   const mapRef = useRef(null);
 
+  // --- 1. FETCH USER DATA & LOCATION ON LOAD ---
   useEffect(() => {
     (async () => {
+      // A. Get Location
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      const loc = await Location.getCurrentPositionAsync({});
-      setRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.25,
-        longitudeDelta: 0.25
-      });
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({});
+        setRegion({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.25,
+          longitudeDelta: 0.25
+        });
+      }
+
+      // B. Get User Data from AWS
+      try {
+        const user = await getCurrentUser();
+        console.log("Current User ID:", user.userId); // Debug Log
+
+        const attributes = await fetchUserAttributes();
+        console.log("User Attributes:", attributes); // Debug Log
+        
+        if (attributes.email) setProfileEmail(attributes.email);
+        
+        const name = attributes.name || attributes.given_name || "User";
+        setProfileName(name);
+
+        if (attributes.picture) {
+          setProfileImage({ uri: attributes.picture });
+        }
+      } catch (err) {
+        console.log("Error fetching user data:", err);
+        // If we can't get data, we might want to force logout, 
+        // but for now let's just leave it as 'Guest' so you can hit the logout button.
+      }
     })();
   }, []);
 
-  const handleProfileMenuPress = (option) => {
+  // --- 2. FIXED LOGOUT LOGIC ---
+  const handleProfileMenuPress = async (option) => {
     setShowProfileMenu(false);
+    
     if (option === "Logout") {
-      navigation.replace("SignIn");
+      Alert.alert(
+        "Sign Out", 
+        "Are you sure?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Logout", 
+            style: "destructive",
+            onPress: async () => {
+              try {
+                // 1. Clear AWS Session
+                await signOut(); 
+                
+                // 2. FORCE NAVIGATION RESET
+                // This clears the history so the user can't go "back" to the map
+                navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: "SignIn" }],
+                    })
+                  );
+                  
+              } catch (error) {
+                console.error("Error signing out: ", error);
+                Alert.alert("Error", "Could not sign out. Please try again.");
+              }
+            }
+          }
+        ]
+      );
     } else if (option === "Plan a drive") {
       setShowRouteModal(true);
     } else if (option === "Settings") {
       navigation.navigate("Settings");
     }
-    // Handle other menu options
   };
 
   const handleMarkerPress = (alert) => {
-    // Show route when user taps on a marker
     setShowRouteModal(true);
   };
 
@@ -71,14 +131,12 @@ export default function MapScreen({ navigation }) {
       Alert.alert('Permission Required', 'Sorry, we need camera roll permissions to select a photo.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-
     if (!result.canceled) {
       setProfileImage({ uri: result.assets[0].uri });
     }
@@ -91,13 +149,11 @@ export default function MapScreen({ navigation }) {
       Alert.alert('Permission Required', 'Sorry, we need camera permissions to take a photo.');
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-
     if (!result.canceled) {
       setProfileImage({ uri: result.assets[0].uri });
     }
@@ -228,53 +284,23 @@ export default function MapScreen({ navigation }) {
             const location = await Location.getCurrentPositionAsync({
               accuracy: Location.Accuracy.High,
             });
-
             const newRegion = {
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
               latitudeDelta: 0.01,
               longitudeDelta: 0.01
             };
-
-            // Update state
             setRegion(newRegion);
-
-            // Animate map to new location
             if (mapRef.current) {
               mapRef.current.animateToRegion(newRegion, 1000);
             }
           } catch (error) {
             console.log('Error getting location:', error);
-            // Request permission if denied
-            try {
-              const { status } = await Location.requestForegroundPermissionsAsync();
-              if (status === 'granted') {
-                // Retry getting location
-                const location = await Location.getCurrentPositionAsync({
-                  accuracy: Location.Accuracy.High,
-                });
-
-                const newRegion = {
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01
-                };
-
-                setRegion(newRegion);
-                if (mapRef.current) {
-                  mapRef.current.animateToRegion(newRegion, 1000);
-                }
-              }
-            } catch (permissionError) {
-              console.log('Permission error:', permissionError);
-            }
           }
         }}
       >
         <Ionicons name="locate" size={18} color="#666" />
       </Pressable>
-
 
       {/* Profile Menu Modal */}
       <Modal
@@ -317,6 +343,7 @@ export default function MapScreen({ navigation }) {
                   </Pressable>
                 </View>
               </View>
+              {/* DISPLAYING REAL AWS DATA */}
               <Text style={styles.profileModalName}>{profileName}</Text>
               <Text style={styles.profileModalEmail}>{profileEmail}</Text>
             </View>
@@ -354,8 +381,8 @@ export default function MapScreen({ navigation }) {
               </Pressable>
 
               <Pressable style={styles.profileMenuItem} onPress={() => handleProfileMenuPress("Logout")}>
-                <Ionicons name="log-out" size={24} color="#666" />
-                <Text style={styles.profileMenuText}>Logout</Text>
+                <Ionicons name="log-out" size={24} color="#FF3B30" />
+                <Text style={[styles.profileMenuText, {color: "#FF3B30"}]}>Logout</Text>
                 <Ionicons name="chevron-forward" size={20} color="#999" />
               </Pressable>
             </View>
@@ -459,7 +486,6 @@ export default function MapScreen({ navigation }) {
                   </View>
                   <Text style={styles.mapTypeCardLabel}>Default</Text>
                 </Pressable>
-
                 <Pressable
                   style={[styles.mapTypeCard, mapType === "satellite" && styles.selectedMapTypeCard]}
                   onPress={() => setMapType("satellite")}
@@ -469,7 +495,6 @@ export default function MapScreen({ navigation }) {
                   </View>
                   <Text style={styles.mapTypeCardLabel}>Satellite</Text>
                 </Pressable>
-
                 <Pressable
                   style={[styles.mapTypeCard, mapType === "hybrid" && styles.selectedMapTypeCard]}
                   onPress={() => setMapType("hybrid")}
@@ -568,7 +593,6 @@ export default function MapScreen({ navigation }) {
         <View style={styles.imagePickerModalContainer}>
           <View style={styles.imagePickerModal}>
             <Text style={styles.imagePickerTitle}>Change Profile Photo</Text>
-
             <Pressable
               style={styles.imagePickerOption}
               onPress={() => handleImagePickerOption('gallery')}
@@ -576,7 +600,6 @@ export default function MapScreen({ navigation }) {
               <Ionicons name="images" size={24} color={colors.primary} />
               <Text style={styles.imagePickerOptionText}>Choose from Gallery</Text>
             </Pressable>
-
             <Pressable
               style={styles.imagePickerOption}
               onPress={() => handleImagePickerOption('camera')}
@@ -584,7 +607,6 @@ export default function MapScreen({ navigation }) {
               <Ionicons name="camera" size={24} color={colors.primary} />
               <Text style={styles.imagePickerOptionText}>Take Photo</Text>
             </Pressable>
-
             <Pressable
               style={styles.imagePickerCancelButton}
               onPress={() => setShowImagePickerModal(false)}

@@ -1,9 +1,35 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, type, radius } from "../../theme/tokens";
+import { signOut } from "aws-amplify/auth"; // <--- IMPORT THIS
+import { colors, spacing, type } from "../../theme/tokens";
 
 export default function SettingsMenuScreen({ navigation }) {
+  
+  // --- SIGN OUT LOGIC ---
+  const handleSignOut = async () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Sign Out", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await signOut();
+              // The App.js Hub listener will detect this and redirect to SignIn
+            } catch (error) {
+              console.error("Error signing out:", error);
+              Alert.alert("Error", "Failed to sign out.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const settingsOptions = [
     {
       section: "Settings",
@@ -26,6 +52,18 @@ export default function SettingsMenuScreen({ navigation }) {
         { icon: "car-outline", label: "Tolls and Express Lane Passes", route: "TollPasses" },
         { icon: "water-outline", label: "Gas Stations", route: "GasStation" },
         { icon: "speedometer-outline", label: "Speedometer", route: "Speedometer" },
+      ]
+    },
+    // --- ADDED ACCOUNT SECTION ---
+    {
+      section: "Account",
+      items: [
+        { 
+          icon: "log-out-outline", 
+          label: "Log Out", 
+          action: handleSignOut, // Custom action instead of route
+          isDestructive: true // Flag to style it red
+        },
       ]
     }
   ];
@@ -65,6 +103,13 @@ export default function SettingsMenuScreen({ navigation }) {
                     itemIndex === section.items.length - 1 && styles.settingsItemLast
                   ]}
                   onPress={() => {
+                    // 1. Handle Custom Actions (like Sign Out)
+                    if (item.action) {
+                      item.action();
+                      return;
+                    }
+
+                    // 2. Handle Notifications specific logic
                     if (section.section === "Notifications") {
                       if (item.label === "Phone") {
                         navigation.navigate("NotificationSettings", { initialTab: "Push" });
@@ -75,22 +120,38 @@ export default function SettingsMenuScreen({ navigation }) {
                         return;
                       }
                     }
-                    // Navigate to specific settings screen
+
+                    // 3. Handle Navigation
                     if (item.route) {
                       navigation.navigate(item.route);
                     }
                   }}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Ionicons name={item.icon} size={24} color={colors.text} />
-                    <Text style={styles.settingsItemText}>{item.label}</Text>
+                    <Ionicons 
+                      name={item.icon} 
+                      size={24} 
+                      color={item.isDestructive ? "#FF3B30" : colors.text} // Red icon for logout
+                    />
+                    <Text style={[
+                      styles.settingsItemText,
+                      item.isDestructive && { color: "#FF3B30" } // Red text for logout
+                    ]}>
+                      {item.label}
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+                  
+                  {/* Hide chevron for actions like logout */}
+                  {!item.action && (
+                    <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+                  )}
                 </Pressable>
               ))}
             </View>
           </View>
         ))}
+        {/* Bottom padding for scrolling */}
+        <View style={{ height: 40 }} /> 
       </ScrollView>
     </View>
   );
