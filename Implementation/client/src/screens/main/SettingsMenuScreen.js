@@ -1,12 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { signOut } from "aws-amplify/auth"; // <--- IMPORT THIS
+import { CommonActions } from "@react-navigation/native"; // <--- ADD THIS IMPORT
+import { signOut } from "aws-amplify/auth";
 import { colors, spacing, type } from "../../theme/tokens";
 
 export default function SettingsMenuScreen({ navigation }) {
   
-  // --- SIGN OUT LOGIC ---
+  // --- SIGN OUT LOGIC (UPDATED) ---
   const handleSignOut = async () => {
     Alert.alert(
       "Sign Out",
@@ -18,8 +19,16 @@ export default function SettingsMenuScreen({ navigation }) {
           style: "destructive", 
           onPress: async () => {
             try {
-              await signOut();
-              // The App.js Hub listener will detect this and redirect to SignIn
+              // 1. Global Sign Out (Attempts to clear browser session too)
+              await signOut({ global: true });
+              
+              // 2. Force Navigation Reset (Send to SignIn and clear history)
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: "SignIn" }],
+                })
+              );
             } catch (error) {
               console.error("Error signing out:", error);
               Alert.alert("Error", "Failed to sign out.");
@@ -54,15 +63,15 @@ export default function SettingsMenuScreen({ navigation }) {
         { icon: "speedometer-outline", label: "Speedometer", route: "Speedometer" },
       ]
     },
-    // --- ADDED ACCOUNT SECTION ---
+    // --- ACCOUNT SECTION ---
     {
       section: "Account",
       items: [
         { 
           icon: "log-out-outline", 
           label: "Log Out", 
-          action: handleSignOut, // Custom action instead of route
-          isDestructive: true // Flag to style it red
+          action: handleSignOut, 
+          isDestructive: true 
         },
       ]
     }
@@ -131,11 +140,11 @@ export default function SettingsMenuScreen({ navigation }) {
                     <Ionicons 
                       name={item.icon} 
                       size={24} 
-                      color={item.isDestructive ? "#FF3B30" : colors.text} // Red icon for logout
+                      color={item.isDestructive ? "#FF3B30" : colors.text} 
                     />
                     <Text style={[
                       styles.settingsItemText,
-                      item.isDestructive && { color: "#FF3B30" } // Red text for logout
+                      item.isDestructive && { color: "#FF3B30" } 
                     ]}>
                       {item.label}
                     </Text>

@@ -36,7 +36,13 @@ export default function SignInScreen({ navigation }) {
       return;
     }
     try {
-      await signInWithRedirect({ provider });
+      // UPDATED: Forces consent screen to break auto-login loop
+      await signInWithRedirect({ 
+        provider,
+        customProviderParameters: {
+          prompt: "select_account consent" 
+        }
+      });
     } catch (error) {
       console.log("Social Login response:", error);
       // FIX: If already signed in, treat as success
@@ -47,7 +53,6 @@ export default function SignInScreen({ navigation }) {
         navigation.replace("Main");
       } else {
         console.error("Social Login Error:", error);
-        Alert.alert("Login Failed", error.message || "Something went wrong");
       }
     }
   };

@@ -9,6 +9,8 @@ import { colors, spacing, type, radius, shadows } from "../../theme/tokens";
 const SUPPORTED_PROVIDERS = ["Google"];
 
 export default function SignUpScreen({ navigation }) {
+  // Added fullName state
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,19 +38,18 @@ export default function SignUpScreen({ navigation }) {
 
   // --- SOCIAL LOGIN LOGIC ---
   const handleSocialLogin = async (provider) => {
-    // Safety check before triggering OAuth
-    try {
-      await getCurrentUser();
-      navigation.replace("Main");
-      return;
-    } catch (err) {}
-
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
       Alert.alert("Coming Soon", `${provider} login is currently under development.`);
       return;
     }
     try {
-      await signInWithRedirect({ provider });
+      // UPDATED: Forces consent screen to break auto-login loop
+      await signInWithRedirect({ 
+        provider,
+        customProviderParameters: {
+          prompt: "select_account consent" 
+        }
+      });
     } catch (error) {
       console.log("Social Login response:", error);
       if (
@@ -58,13 +59,17 @@ export default function SignUpScreen({ navigation }) {
         navigation.replace("Main");
       } else {
         console.error("Social Login Error:", error);
-        Alert.alert("Login Failed", error.message);
       }
     }
   };
 
   // --- MANUAL SIGN UP LOGIC ---
   const handleSignUp = async () => {
+    // Basic Validation for Name
+    if (!fullName.trim()) {
+      Alert.alert("Error", "Please enter your full name.");
+      return;
+    }
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
@@ -76,7 +81,10 @@ export default function SignUpScreen({ navigation }) {
         username: email,
         password,
         options: {
-          userAttributes: { email },
+          userAttributes: { 
+            email,
+            name: fullName // Saving the name here!
+          },
           autoSignIn: true,
         },
       });
@@ -88,7 +96,18 @@ export default function SignUpScreen({ navigation }) {
         navigation.replace("Main");
       }
     } catch (error) {
-      if (
+      // HANDLE "USER ALREADY EXISTS"
+      if (error.name === 'UsernameExistsException') {
+        Alert.alert(
+          "Account Exists",
+          "This email is already registered. Please log in instead.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Log In", onPress: () => navigation.navigate("SignIn") }
+          ]
+        );
+      } 
+      else if (
         error.name === 'UserAlreadyAuthenticatedException' || 
         (error.message && error.message.includes('already a signed in user'))
       ) {
@@ -164,6 +183,15 @@ export default function SignUpScreen({ navigation }) {
   return (
     <View style={styles.root}>
       <Text style={styles.h1}>Sign up</Text>
+
+      {/* Added Full Name Input */}
+      <WDInput
+        label="Full Name"
+        placeholder="John Doe"
+        value={fullName}
+        onChangeText={setFullName}
+        style={styles.inputField}
+      />
 
       <WDInput
         label="Email"
