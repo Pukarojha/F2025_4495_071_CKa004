@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../../theme/tokens";
 import { getDirections, decodePolyline } from "../../services/googleMapsService";
 import { ROUTE_COLORS } from "../../config/googleMaps";
+import WeatherAlertModal from "../../components/WeatherAlertModal";
+import { api } from "../../api/client";
 
 export default function RoutePreviewScreen({ navigation, route }) {
   const routeParams = route?.params || {};
@@ -37,9 +39,41 @@ export default function RoutePreviewScreen({ navigation, route }) {
   });
   const mapRef = useRef(null);
 
+  const [weatherAlerts, setWeatherAlerts] = useState([]);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [currentAlert, setCurrentAlert] = useState(null);
+
   useEffect(() => {
     fetchDirections();
   }, []);
+
+  useEffect(() => {
+    if (routes.length > 0 && routes[selectedRoute]?.polyline) {
+      checkForWeatherAlerts();
+    }
+  }, [selectedRoute, routes]);
+
+  const checkForWeatherAlerts = async () => {
+    try {
+      const polyline = routes[selectedRoute].polyline;
+
+      if (!polyline || polyline.length === 0) return;
+
+      const sampleCoords = polyline
+        .filter((_, index) => index % 10 === 0)
+        .map(coord => [coord.latitude, coord.longitude]);
+
+      const alerts = await api.getAlertsForRoute(sampleCoords);
+      setWeatherAlerts(alerts);
+
+      if (alerts.length > 0 && (alerts[0].severity === "Extreme" || alerts[0].severity === "Severe")) {
+        setCurrentAlert(alerts[0]);
+        setShowAlertModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching weather alerts:', error);
+    }
+  };
 
   const fetchDirections = async () => {
     setLoading(true);
@@ -181,6 +215,22 @@ export default function RoutePreviewScreen({ navigation, route }) {
   const handleSave = () => {
     // Save route functionality
     console.log("Save route");
+  };
+
+  const handleReroute = () => {
+    setShowAlertModal(false);
+    if (routes.length > 1) {
+      const nextRoute = (selectedRoute + 1) % routes.length;
+      setSelectedRoute(nextRoute);
+    }
+  };
+
+  const handleStayOnRoute = () => {
+    setShowAlertModal(false);
+  };
+
+  const handleCloseAlert = () => {
+    setShowAlertModal(false);
   };
 
   return (
@@ -363,6 +413,15 @@ export default function RoutePreviewScreen({ navigation, route }) {
           </Pressable>
         </View>
       </View>
+
+      {/* Weather Alert Modal */}
+      <WeatherAlertModal
+        visible={showAlertModal}
+        alert={currentAlert}
+        onReroute={handleReroute}
+        onStayOnRoute={handleStayOnRoute}
+        onClose={handleCloseAlert}
+      />
     </View>
   );
 }
