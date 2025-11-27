@@ -1,22 +1,45 @@
-import React, { useMemo, useState } from "react";
-import { View, StyleSheet, Pressable, Text, FlatList } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, StyleSheet, Pressable, Text, FlatList, ActivityIndicator } from "react-native";
 import AppBar from "../../components/ui/AppBar";
 import AlertCard from "../../components/AlertCard";
 import { colors, spacing, radius } from "../../theme/tokens";
+import { api } from "../../api/client";
 
 const SEVERITIES = ["Extreme","Severe","Moderate","Minor"];
 
-const SAMPLE_ALERTS = [
-  { id: "1", title: "Severe Thunderstorm", description: "Damaging winds possible.", severity: "Severe", area: "King County, WA", updatedAt: new Date().toISOString() },
-  { id: "2", title: "Winter Weather Advisory", description: "Snow & icy roads.", severity: "Moderate", area: "Snohomish County, WA", updatedAt: new Date().toISOString() },
-  { id: "3", title: "Excessive Heat Warning", description: "Highs up to 40°C.", severity: "Extreme", area: "Clark County, NV", updatedAt: new Date().toISOString() }
-];
-
 export default function AlertsScreen() {
   const [severity, setSeverity] = useState("");
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getAlerts();
+      const formattedAlerts = data.map(alert => ({
+        id: alert.id,
+        title: alert.title || alert.event,
+        description: alert.message || "",
+        severity: alert.severity,
+        area: "Along your route",
+        updatedAt: alert.updated || new Date().toISOString()
+      }));
+      setAlerts(formattedAlerts);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      setAlerts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const data = useMemo(
-    () => (severity ? SAMPLE_ALERTS.filter(a => a.severity === severity) : SAMPLE_ALERTS),
-    [severity]
+    () => (severity ? alerts.filter(a => a.severity === severity) : alerts),
+    [severity, alerts]
   );
 
   return (
@@ -33,12 +56,23 @@ export default function AlertsScreen() {
           <Text style={{ color: "#fff" }}>Clear</Text>
         </Pressable>
       </View>
-      <FlatList
-        data={data}
-        keyExtractor={(i) => i.id}
-        renderItem={({ item }) => <AlertCard {...item} />}
-        contentContainerStyle={{ paddingVertical: spacing.sm }}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading weather alerts...</Text>
+        </View>
+      ) : data.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No weather alerts at this time</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(i) => i.id}
+          renderItem={({ item }) => <AlertCard {...item} />}
+          contentContainerStyle={{ paddingVertical: spacing.sm }}
+        />
+      )}
     </View>
   );
 }
@@ -48,5 +82,9 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "#212636", borderWidth: 1, borderColor: "#2A2F3A" },
   chipActive: { backgroundColor: "#3B3F52" },
   chipText: { color: "#fff" },
-  clearBtn: { marginLeft: "auto", paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.md, backgroundColor: colors.primary }
+  clearBtn: { marginLeft: "auto", paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.md, backgroundColor: colors.primary },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: spacing.md },
+  loadingText: { color: colors.muted, fontSize: 14 },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: spacing.xl },
+  emptyText: { color: colors.muted, fontSize: 16, textAlign: "center" }
 });

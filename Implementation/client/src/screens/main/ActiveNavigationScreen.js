@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../../theme/tokens";
 import { ROUTE_COLORS } from "../../config/googleMaps";
 import { getDirections, decodePolyline } from "../../services/googleMapsService";
+import WeatherAlertModal from "../../components/WeatherAlertModal";
+import { api } from "../../api/client";
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MAX_SHEET_HEIGHT = SCREEN_HEIGHT * 0.7; // 70% of screen
@@ -25,6 +27,10 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01
   });
+
+  const [weatherAlerts, setWeatherAlerts] = useState([]);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [currentAlert, setCurrentAlert] = useState(null);
 
   // Use recalculated routes if available, otherwise use original routes
   const activeRoutes = recalculatedRoutes || routes;
@@ -68,6 +74,37 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkLocationForAlerts();
+    }, 60000);
+
+    checkLocationForAlerts();
+
+    return () => clearInterval(interval);
+  }, [currentRoute]);
+
+  const checkLocationForAlerts = async () => {
+    if (!currentRoute?.polyline || currentRoute.polyline.length === 0) return;
+
+    try {
+      const upcomingCoords = currentRoute.polyline
+        .slice(0, Math.min(50, currentRoute.polyline.length))
+        .filter((_, index) => index % 5 === 0)
+        .map(coord => [coord.latitude, coord.longitude]);
+
+      const alerts = await api.getAlertsForRoute(upcomingCoords);
+      setWeatherAlerts(alerts);
+
+      if (alerts.length > 0 && !showAlertModal) {
+        setCurrentAlert(alerts[0]);
+        setShowAlertModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking for weather alerts:', error);
+    }
+  };
 
   // Recalculate route when stops are added
   useEffect(() => {
@@ -178,6 +215,47 @@ export default function ActiveNavigationScreen({ navigation, route }) {
         setStops(prevStops => [...prevStops, stopLocation]);
       }
     });
+  };
+
+  const handleReroute = async () => {
+    setShowAlertModal(false);
+    setIsRecalculating(true);
+
+    try {
+      const originParam = origin?.coordinates || origin?.address;
+      const destParam = destination?.coordinates || destination?.address;
+
+      const directionsResponse = await getDirections(originParam, destParam, {
+        avoidWeather: true,
+        alternatives: true
+      });
+
+      if (directionsResponse.success && directionsResponse.routes.length > 0) {
+        const transformedRoutes = directionsResponse.routes.map((route, index) => ({
+          id: index,
+          polyline: decodePolyline(route.overview_polyline),
+          steps: route.legs[0].steps,
+          distance: route.legs[0].distance.text,
+          duration: route.legs[0].duration.text,
+          startLocation: route.legs[0].start_location,
+          endLocation: route.legs[0].end_location
+        }));
+
+        setRecalculatedRoutes(transformedRoutes);
+      }
+    } catch (error) {
+      console.error('Error recalculating route:', error);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
+  const handleStayOnRoute = () => {
+    setShowAlertModal(false);
+  };
+
+  const handleCloseAlert = () => {
+    setShowAlertModal(false);
   };
 
   const getManeuverIcon = (maneuver) => {
@@ -511,6 +589,15 @@ export default function ActiveNavigationScreen({ navigation, route }) {
           </Pressable>
         </View>
       </Animated.View>
+
+      {/* Weather Alert Modal */}
+      <WeatherAlertModal
+        visible={showAlertModal}
+        alert={currentAlert}
+        onReroute={handleReroute}
+        onStayOnRoute={handleStayOnRoute}
+        onClose={handleCloseAlert}
+      />
     </View>
   );
 }
