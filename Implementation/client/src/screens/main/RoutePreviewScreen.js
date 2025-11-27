@@ -66,7 +66,8 @@ export default function RoutePreviewScreen({ navigation, route }) {
       const alerts = await api.getAlertsForRoute(sampleCoords);
       setWeatherAlerts(alerts);
 
-      if (alerts.length > 0 && (alerts[0].severity === "Extreme" || alerts[0].severity === "Severe")) {
+      // Show modal for Extreme, Severe, or Moderate alerts
+      if (alerts.length > 0 && (alerts[0].severity === "Extreme" || alerts[0].severity === "Severe" || alerts[0].severity === "Moderate")) {
         setCurrentAlert(alerts[0]);
         setShowAlertModal(true);
       }

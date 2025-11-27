@@ -97,6 +97,7 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       const alerts = await api.getAlertsForRoute(upcomingCoords);
       setWeatherAlerts(alerts);
 
+      // Show modal for ANY alert (Extreme, Severe, Moderate, Minor) during navigation
       if (alerts.length > 0 && !showAlertModal) {
         setCurrentAlert(alerts[0]);
         setShowAlertModal(true);

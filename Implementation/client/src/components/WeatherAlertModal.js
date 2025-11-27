@@ -45,13 +45,13 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
                 color={getSeverityColor(alert.severity)}
               />
             </View>
-            <Text style={styles.title}>{alert.title || alert.event}</Text>
+            <Text style={styles.title}>{alert.headline || alert.event || alert.title}</Text>
           </View>
 
           {/* Alert Message */}
           <View style={styles.content}>
             <Text style={styles.message}>
-              {alert.message || alert.description || "Weather conditions may affect your route."}
+              {alert.description || alert.headline || alert.message || "Weather conditions may affect your route."}
             </Text>
 
             {/* Severity Badge */}
