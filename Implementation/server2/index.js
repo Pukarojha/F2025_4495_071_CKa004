@@ -135,6 +135,14 @@ app.post('/alerts/search', async (req, res) => {
       cache.set('all-alerts', alerts);
     }
 
+    // Debug: Log geometry types
+    const geometryTypes = {};
+    alerts.forEach(alert => {
+      const type = alert.geometry?.type || 'null';
+      geometryTypes[type] = (geometryTypes[type] || 0) + 1;
+    });
+    console.log('[API] Alert geometry types:', geometryTypes);
+
     // Filter alerts that affect the given coordinates
     const relevantAlerts = alerts.filter(alert => {
       if (!alert.geometry || !alert.geometry.coordinates) {
@@ -149,6 +157,13 @@ app.post('/alerts/search', async (req, res) => {
     });
 
     console.log(`[API] Found ${relevantAlerts.length} relevant alerts`);
+    if (relevantAlerts.length > 0) {
+      console.log('[API] Relevant alerts:', relevantAlerts.map(a => ({
+        event: a.event,
+        severity: a.severity,
+        area: a.areaDesc
+      })));
+    }
     res.json(relevantAlerts);
   } catch (error) {
     console.error('[API] Error searching alerts:', error.message);
@@ -214,17 +229,37 @@ app.get('/alerts/:state', async (req, res) => {
 
 /**
  * Helper function to check if a point is within an alert's geometry
- * This is a simplified version - for production, you'd want a proper GeoJSON library
+ * Supports Polygon, MultiPolygon, and handles missing geometry
  */
 function isPointInAlertGeometry(lat, lon, geometry) {
-  if (!geometry || geometry.type !== 'Polygon') {
+  if (!geometry || !geometry.coordinates) {
+    // No geometry data - can't determine if point is affected
     return false;
   }
 
-  // For simplicity, we'll do a bounding box check
-  // In production, you'd use a proper point-in-polygon algorithm
-  const coords = geometry.coordinates[0];
+  // Handle different geometry types
+  if (geometry.type === 'Polygon') {
+    return checkPointInPolygon(lat, lon, geometry.coordinates[0]);
+  } else if (geometry.type === 'MultiPolygon') {
+    // Check if point is in any of the polygons
+    return geometry.coordinates.some(polygon =>
+      checkPointInPolygon(lat, lon, polygon[0])
+    );
+  }
 
+  return false;
+}
+
+/**
+ * Check if a point is within a polygon using bounding box
+ * coords is an array of [longitude, latitude] pairs
+ */
+function checkPointInPolygon(lat, lon, coords) {
+  if (!coords || coords.length === 0) {
+    return false;
+  }
+
+  // Bounding box check
   let minLat = Infinity, maxLat = -Infinity;
   let minLon = Infinity, maxLon = -Infinity;
 
