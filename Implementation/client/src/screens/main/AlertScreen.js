@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { View, StyleSheet, Pressable, Text, FlatList, ActivityIndicator } from "react-native";
 import AppBar from "../../components/ui/AppBar";
 import AlertCard from "../../components/AlertCard";
+import WeatherAlertModal from "../../components/WeatherAlertModal";
 import { colors, spacing, radius } from "../../theme/tokens";
 import { api } from "../../api/client";
 
@@ -11,6 +12,8 @@ export default function AlertsScreen() {
   const [severity, setSeverity] = useState("");
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [showAlertModal, setShowAlertModal] = useState(false);
 
   useEffect(() => {
     fetchAlerts();
@@ -22,11 +25,11 @@ export default function AlertsScreen() {
       const data = await api.getAlerts();
       const formattedAlerts = data.map(alert => ({
         id: alert.id,
-        title: alert.title || alert.event,
-        description: alert.message || "",
+        title: alert.headline || alert.event,
+        description: alert.description || alert.headline || "",
         severity: alert.severity,
-        area: "Along your route",
-        updatedAt: alert.updated || new Date().toISOString()
+        area: alert.areaDesc || "Along your route",
+        updatedAt: alert.sent || alert.effective || new Date().toISOString()
       }));
       setAlerts(formattedAlerts);
     } catch (error) {
@@ -41,6 +44,16 @@ export default function AlertsScreen() {
     () => (severity ? alerts.filter(a => a.severity === severity) : alerts),
     [severity, alerts]
   );
+
+  const handleAlertPress = (alert) => {
+    setSelectedAlert(alert);
+    setShowAlertModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAlertModal(false);
+    setSelectedAlert(null);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -69,10 +82,21 @@ export default function AlertsScreen() {
         <FlatList
           data={data}
           keyExtractor={(i) => i.id}
-          renderItem={({ item }) => <AlertCard {...item} />}
+          renderItem={({ item }) => (
+            <AlertCard {...item} onPress={() => handleAlertPress(item)} />
+          )}
           contentContainerStyle={{ paddingVertical: spacing.sm }}
         />
       )}
+
+      {/* Alert Detail Modal */}
+      <WeatherAlertModal
+        visible={showAlertModal}
+        alert={selectedAlert}
+        onReroute={handleCloseModal}
+        onStayOnRoute={handleCloseModal}
+        onClose={handleCloseModal}
+      />
     </View>
   );
 }
