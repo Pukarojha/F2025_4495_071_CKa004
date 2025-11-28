@@ -31,6 +31,7 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   const [weatherAlerts, setWeatherAlerts] = useState([]);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [currentAlert, setCurrentAlert] = useState(null);
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
 
   // Use recalculated routes if available, otherwise use original routes
   const activeRoutes = recalculatedRoutes || routes;
@@ -99,6 +100,7 @@ export default function ActiveNavigationScreen({ navigation, route }) {
 
       // Show modal for ANY alert (Extreme, Severe, Moderate, Minor) during navigation
       if (alerts.length > 0 && !showAlertModal) {
+        setCurrentAlertIndex(0);
         setCurrentAlert(alerts[0]);
         setShowAlertModal(true);
       }
@@ -595,6 +597,22 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       <WeatherAlertModal
         visible={showAlertModal}
         alert={currentAlert}
+        alerts={weatherAlerts}
+        currentIndex={currentAlertIndex}
+        onNext={() => {
+          const nextIndex = currentAlertIndex + 1;
+          if (nextIndex < weatherAlerts.length) {
+            setCurrentAlertIndex(nextIndex);
+            setCurrentAlert(weatherAlerts[nextIndex]);
+          }
+        }}
+        onPrevious={() => {
+          const prevIndex = currentAlertIndex - 1;
+          if (prevIndex >= 0) {
+            setCurrentAlertIndex(prevIndex);
+            setCurrentAlert(weatherAlerts[prevIndex]);
+          }
+        }}
         onReroute={handleReroute}
         onStayOnRoute={handleStayOnRoute}
         onClose={handleCloseAlert}

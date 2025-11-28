@@ -4,8 +4,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../theme/tokens";
 import WDButton from "./ui/WDButton";
 
-export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnRoute, onClose }) {
+export default function WeatherAlertModal({
+  visible,
+  alert,
+  alerts = [],
+  currentIndex = 0,
+  onNext,
+  onPrevious,
+  onReroute,
+  onStayOnRoute,
+  onClose
+}) {
   if (!alert) return null;
+
+  const hasMultipleAlerts = alerts.length > 1;
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex < alerts.length - 1;
 
   const getSeverityColor = (severity) => {
     const severityMap = {
@@ -36,6 +50,39 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
+          {/* Alert Counter and Navigation */}
+          {hasMultipleAlerts && (
+            <View style={styles.alertNavigation}>
+              <Pressable
+                onPress={onPrevious}
+                disabled={!canGoPrevious}
+                style={[styles.navButton, !canGoPrevious && styles.navButtonDisabled]}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={canGoPrevious ? colors.primary : colors.muted}
+                />
+              </Pressable>
+
+              <Text style={styles.alertCounter}>
+                Alert {currentIndex + 1} of {alerts.length}
+              </Text>
+
+              <Pressable
+                onPress={onNext}
+                disabled={!canGoNext}
+                style={[styles.navButton, !canGoNext && styles.navButtonDisabled]}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={canGoNext ? colors.primary : colors.muted}
+                />
+              </Pressable>
+            </View>
+          )}
+
           {/* Alert Icon and Title */}
           <View style={styles.header}>
             <View style={[styles.iconContainer, { backgroundColor: getSeverityColor(alert.severity) + "20" }]}>
@@ -111,6 +158,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8
+  },
+  alertNavigation: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  navButton: {
+    padding: spacing.xs,
+    borderRadius: radius.md
+  },
+  navButtonDisabled: {
+    opacity: 0.5
+  },
+  alertCounter: {
+    ...type.caption,
+    color: colors.muted,
+    fontWeight: "600",
+    fontSize: 13
   },
   header: {
     alignItems: "center",
