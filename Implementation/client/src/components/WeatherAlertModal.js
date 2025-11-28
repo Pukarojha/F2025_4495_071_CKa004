@@ -1,11 +1,25 @@
 import React from "react";
-import { View, Text, StyleSheet, Modal, Pressable } from "react-native";
+import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../theme/tokens";
 import WDButton from "./ui/WDButton";
 
-export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnRoute, onClose }) {
+export default function WeatherAlertModal({
+  visible,
+  alert,
+  alerts = [],
+  currentIndex = 0,
+  onNext,
+  onPrevious,
+  onReroute,
+  onStayOnRoute,
+  onClose
+}) {
   if (!alert) return null;
+
+  const hasMultipleAlerts = alerts.length > 1;
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex < alerts.length - 1;
 
   const getSeverityColor = (severity) => {
     const severityMap = {
@@ -36,6 +50,39 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
+          {/* Alert Counter and Navigation */}
+          {hasMultipleAlerts && (
+            <View style={styles.alertNavigation}>
+              <Pressable
+                onPress={onPrevious}
+                disabled={!canGoPrevious}
+                style={[styles.navButton, !canGoPrevious && styles.navButtonDisabled]}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={canGoPrevious ? colors.primary : colors.muted}
+                />
+              </Pressable>
+
+              <Text style={styles.alertCounter}>
+                Alert {currentIndex + 1} of {alerts.length}
+              </Text>
+
+              <Pressable
+                onPress={onNext}
+                disabled={!canGoNext}
+                style={[styles.navButton, !canGoNext && styles.navButtonDisabled]}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={canGoNext ? colors.primary : colors.muted}
+                />
+              </Pressable>
+            </View>
+          )}
+
           {/* Alert Icon and Title */}
           <View style={styles.header}>
             <View style={[styles.iconContainer, { backgroundColor: getSeverityColor(alert.severity) + "20" }]}>
@@ -45,20 +92,24 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
                 color={getSeverityColor(alert.severity)}
               />
             </View>
-            <Text style={styles.title}>{alert.title || alert.event}</Text>
+            <Text style={styles.title}>{alert.headline || alert.event || alert.title}</Text>
           </View>
 
-          {/* Alert Message */}
-          <View style={styles.content}>
+          {/* Scrollable Alert Content */}
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
             <Text style={styles.message}>
-              {alert.message || alert.description || "Weather conditions may affect your route."}
+              {alert.description || alert.headline || alert.message || "Weather conditions may affect your route."}
             </Text>
 
             {/* Severity Badge */}
             <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(alert.severity) }]}>
               <Text style={styles.severityText}>{alert.severity} Alert</Text>
             </View>
-          </View>
+          </ScrollView>
 
           {/* Action Buttons */}
           <View style={styles.actions}>
@@ -101,11 +152,34 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     width: "100%",
     maxWidth: 400,
+    maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8
+  },
+  alertNavigation: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  navButton: {
+    padding: spacing.xs,
+    borderRadius: radius.md
+  },
+  navButtonDisabled: {
+    opacity: 0.5
+  },
+  alertCounter: {
+    ...type.caption,
+    color: colors.muted,
+    fontWeight: "600",
+    fontSize: 13
   },
   header: {
     alignItems: "center",
@@ -125,8 +199,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600"
   },
-  content: {
-    marginBottom: spacing.xl
+  scrollContainer: {
+    maxHeight: 300,
+    marginBottom: spacing.lg
+  },
+  scrollContent: {
+    paddingVertical: spacing.xs
   },
   message: {
     ...type.body,

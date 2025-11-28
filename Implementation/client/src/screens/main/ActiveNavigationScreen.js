@@ -21,6 +21,7 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   const [recalculatedRoutes, setRecalculatedRoutes] = useState(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
+  const [activeRouteIndex, setActiveRouteIndex] = useState(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: 43.6532,
     longitude: -79.3832,
@@ -31,10 +32,13 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   const [weatherAlerts, setWeatherAlerts] = useState([]);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [currentAlert, setCurrentAlert] = useState(null);
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
 
   // Use recalculated routes if available, otherwise use original routes
   const activeRoutes = recalculatedRoutes || routes;
-  const currentRoute = activeRoutes?.[selectedRoute];
+  // Use activeRouteIndex if set (after rerouting), otherwise use selectedRoute from params
+  const currentRouteIndex = activeRouteIndex !== null ? activeRouteIndex : selectedRoute;
+  const currentRoute = activeRoutes?.[currentRouteIndex];
   const steps = currentRoute?.steps || [];
   const currentStep = steps[currentStepIndex];
 
@@ -89,15 +93,18 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     if (!currentRoute?.polyline || currentRoute.polyline.length === 0) return;
 
     try {
-      const upcomingCoords = currentRoute.polyline
-        .slice(0, Math.min(50, currentRoute.polyline.length))
-        .filter((_, index) => index % 5 === 0)
+      // Check the entire route for alerts, sampling every 10th coordinate
+      // This ensures we detect alerts along the full route, not just the beginning
+      const routeCoords = currentRoute.polyline
+        .filter((_, index) => index % 10 === 0)
         .map(coord => [coord.latitude, coord.longitude]);
 
-      const alerts = await api.getAlertsForRoute(upcomingCoords);
+      const alerts = await api.getAlertsForRoute(routeCoords);
       setWeatherAlerts(alerts);
 
+      // Show modal for ANY alert (Extreme, Severe, Moderate, Minor) during navigation
       if (alerts.length > 0 && !showAlertModal) {
+        setCurrentAlertIndex(0);
         setCurrentAlert(alerts[0]);
         setShowAlertModal(true);
       }
@@ -231,17 +238,50 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       });
 
       if (directionsResponse.success && directionsResponse.routes.length > 0) {
+        // Helper to calculate arrival time
+        const calculateArrivalTime = (durationInSeconds) => {
+          const now = new Date();
+          const arrival = new Date(now.getTime() + durationInSeconds * 1000);
+          return arrival.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        };
+
         const transformedRoutes = directionsResponse.routes.map((route, index) => ({
           id: index,
           polyline: decodePolyline(route.overview_polyline),
-          steps: route.legs[0].steps,
+          steps: route.legs[0].steps.map(step => ({
+            html_instructions: step.instruction || step.html_instructions || 'Continue straight',
+            distance: step.distance,
+            duration: step.duration,
+            maneuver: step.maneuver || 'straight',
+            start_location: step.start_location,
+            end_location: step.end_location
+          })),
           distance: route.legs[0].distance.text,
           duration: route.legs[0].duration.text,
+          arrivalTime: calculateArrivalTime(route.legs[0].duration.value),
           startLocation: route.legs[0].start_location,
-          endLocation: route.legs[0].end_location
+          endLocation: route.legs[0].end_location,
+          description: `Alternative route - ${route.summary || 'avoiding weather alerts'}`
         }));
 
         setRecalculatedRoutes(transformedRoutes);
+
+        // Switch to the next available route (cycle through alternatives)
+        // If we're on route 0 and there are alternatives, switch to route 1, etc.
+        const nextRouteIndex = transformedRoutes.length > 1
+          ? (currentRouteIndex + 1) % transformedRoutes.length
+          : 0;
+        setActiveRouteIndex(nextRouteIndex);
+        setCurrentStepIndex(0);
+
+        // Immediately check for alerts on the new route
+        setTimeout(() => {
+          checkLocationForAlerts();
+        }, 500);
       }
     } catch (error) {
       console.error('Error recalculating route:', error);
@@ -594,6 +634,22 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       <WeatherAlertModal
         visible={showAlertModal}
         alert={currentAlert}
+        alerts={weatherAlerts}
+        currentIndex={currentAlertIndex}
+        onNext={() => {
+          const nextIndex = currentAlertIndex + 1;
+          if (nextIndex < weatherAlerts.length) {
+            setCurrentAlertIndex(nextIndex);
+            setCurrentAlert(weatherAlerts[nextIndex]);
+          }
+        }}
+        onPrevious={() => {
+          const prevIndex = currentAlertIndex - 1;
+          if (prevIndex >= 0) {
+            setCurrentAlertIndex(prevIndex);
+            setCurrentAlert(weatherAlerts[prevIndex]);
+          }
+        }}
         onReroute={handleReroute}
         onStayOnRoute={handleStayOnRoute}
         onClose={handleCloseAlert}

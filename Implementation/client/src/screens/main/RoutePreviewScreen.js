@@ -42,6 +42,7 @@ export default function RoutePreviewScreen({ navigation, route }) {
   const [weatherAlerts, setWeatherAlerts] = useState([]);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [currentAlert, setCurrentAlert] = useState(null);
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
 
   useEffect(() => {
     fetchDirections();
@@ -64,10 +65,17 @@ export default function RoutePreviewScreen({ navigation, route }) {
         .map(coord => [coord.latitude, coord.longitude]);
 
       const alerts = await api.getAlertsForRoute(sampleCoords);
-      setWeatherAlerts(alerts);
 
-      if (alerts.length > 0 && (alerts[0].severity === "Extreme" || alerts[0].severity === "Severe")) {
-        setCurrentAlert(alerts[0]);
+      // Filter to show only priority alerts (Extreme, Severe, or Moderate)
+      const priorityAlerts = alerts.filter(alert =>
+        alert.severity === "Extreme" || alert.severity === "Severe" || alert.severity === "Moderate"
+      );
+
+      setWeatherAlerts(priorityAlerts);
+
+      if (priorityAlerts.length > 0) {
+        setCurrentAlertIndex(0);
+        setCurrentAlert(priorityAlerts[0]);
         setShowAlertModal(true);
       }
     } catch (error) {
@@ -418,6 +426,22 @@ export default function RoutePreviewScreen({ navigation, route }) {
       <WeatherAlertModal
         visible={showAlertModal}
         alert={currentAlert}
+        alerts={weatherAlerts}
+        currentIndex={currentAlertIndex}
+        onNext={() => {
+          const nextIndex = currentAlertIndex + 1;
+          if (nextIndex < weatherAlerts.length) {
+            setCurrentAlertIndex(nextIndex);
+            setCurrentAlert(weatherAlerts[nextIndex]);
+          }
+        }}
+        onPrevious={() => {
+          const prevIndex = currentAlertIndex - 1;
+          if (prevIndex >= 0) {
+            setCurrentAlertIndex(prevIndex);
+            setCurrentAlert(weatherAlerts[prevIndex]);
+          }
+        }}
         onReroute={handleReroute}
         onStayOnRoute={handleStayOnRoute}
         onClose={handleCloseAlert}
