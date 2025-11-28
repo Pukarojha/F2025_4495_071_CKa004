@@ -67,8 +67,13 @@ export default function RoutePreviewScreen({ navigation, route }) {
       setWeatherAlerts(alerts);
 
       // Show modal for Extreme, Severe, or Moderate alerts
-      if (alerts.length > 0 && (alerts[0].severity === "Extreme" || alerts[0].severity === "Severe" || alerts[0].severity === "Moderate")) {
-        setCurrentAlert(alerts[0]);
+      // Find the first alert with priority severity (Extreme, Severe, or Moderate)
+      const priorityAlert = alerts.find(alert =>
+        alert.severity === "Extreme" || alert.severity === "Severe" || alert.severity === "Moderate"
+      );
+
+      if (priorityAlert) {
+        setCurrentAlert(priorityAlert);
         setShowAlertModal(true);
       }
     } catch (error) {
