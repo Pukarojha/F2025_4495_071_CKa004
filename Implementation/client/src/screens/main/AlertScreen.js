@@ -1,12 +1,18 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, StyleSheet, Pressable, Text, FlatList, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AppBar from "../../components/ui/AppBar";
 import AlertCard from "../../components/AlertCard";
 import WeatherAlertModal from "../../components/WeatherAlertModal";
-import { colors, spacing, radius } from "../../theme/tokens";
+import { colors, spacing, radius, type } from "../../theme/tokens";
 import { api } from "../../api/client";
 
-const SEVERITIES = ["Extreme","Severe","Moderate","Minor"];
+const SEVERITIES = [
+  { label: "Extreme", color: "#DC2626", icon: "warning" },
+  { label: "Severe", color: "#EA580C", icon: "alert-circle" },
+  { label: "Moderate", color: "#F59E0B", icon: "information-circle" },
+  { label: "Minor", color: "#3B82F6", icon: "information-circle" }
+];
 
 export default function AlertsScreen() {
   const [severity, setSeverity] = useState("");
@@ -55,19 +61,66 @@ export default function AlertsScreen() {
     setSelectedAlert(null);
   };
 
+  const getSeverityCount = (sev) => {
+    return alerts.filter(a => a.severity === sev).length;
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <AppBar title="Alerts" />
-      <View style={styles.filterRow}>
-        {SEVERITIES.map(s => (
-          <Pressable key={s} onPress={() => setSeverity(severity === s ? "" : s)}
-            style={[styles.chip, severity === s && styles.chipActive]}>
-            <Text style={styles.chipText}>{s}</Text>
-          </Pressable>
-        ))}
-        <Pressable onPress={() => setSeverity("")} style={styles.clearBtn}>
-          <Text style={{ color: "#fff" }}>Clear</Text>
-        </Pressable>
+
+      {/* Filter Section */}
+      <View style={styles.filterContainer}>
+        <View style={styles.filterHeader}>
+          <Text style={styles.filterTitle}>Filter by Severity</Text>
+          {severity !== "" && (
+            <Pressable onPress={() => setSeverity("")} style={styles.clearBtnSmall}>
+              <Ionicons name="close-circle" size={14} color={colors.primary} />
+              <Text style={styles.clearBtnSmallText}>Clear</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.filterGrid}>
+          {SEVERITIES.map((sev) => {
+            const count = getSeverityCount(sev.label);
+            const isActive = severity === sev.label;
+
+            return (
+              <Pressable
+                key={sev.label}
+                onPress={() => setSeverity(isActive ? "" : sev.label)}
+                style={[
+                  styles.chip,
+                  isActive && {
+                    backgroundColor: sev.color + "20",
+                    borderColor: sev.color,
+                    borderWidth: 2
+                  }
+                ]}
+              >
+                <View style={styles.chipContent}>
+                  <Ionicons
+                    name={sev.icon}
+                    size={16}
+                    color={isActive ? sev.color : colors.muted}
+                  />
+                  <Text style={[
+                    styles.chipText,
+                    isActive && { color: sev.color, fontWeight: "600" }
+                  ]}>
+                    {sev.label}
+                  </Text>
+                </View>
+                {count > 0 && (
+                  <View style={[styles.badge, isActive && { backgroundColor: sev.color }]}>
+                    <Text style={styles.badgeText}>{count}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -102,13 +155,107 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
-  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  chip: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: "#212636", borderWidth: 1, borderColor: "#2A2F3A" },
-  chipActive: { backgroundColor: "#3B3F52" },
-  chipText: { color: "#fff" },
-  clearBtn: { marginLeft: "auto", paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.md, backgroundColor: colors.primary },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", gap: spacing.md },
-  loadingText: { color: colors.muted, fontSize: 14 },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: spacing.xl },
-  emptyText: { color: colors.muted, fontSize: 16, textAlign: "center" }
+  filterContainer: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  filterHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm
+  },
+  filterTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5
+  },
+  clearBtnSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary + "15"
+  },
+  clearBtnSmallText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary
+  },
+  filterGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "48%",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: colors.border
+  },
+  chipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flex: 1
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.text
+  },
+  badge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 12,
+    minWidth: 24,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff"
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.md
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: 14
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl
+  },
+  emptyText: {
+    color: colors.muted,
+    fontSize: 16,
+    textAlign: "center"
+  }
 });
