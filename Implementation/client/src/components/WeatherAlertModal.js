@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Modal, Pressable } from "react-native";
+import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius, type } from "../theme/tokens";
 import WDButton from "./ui/WDButton";
@@ -48,8 +48,12 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
             <Text style={styles.title}>{alert.headline || alert.event || alert.title}</Text>
           </View>
 
-          {/* Alert Message */}
-          <View style={styles.content}>
+          {/* Scrollable Alert Content */}
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
             <Text style={styles.message}>
               {alert.description || alert.headline || alert.message || "Weather conditions may affect your route."}
             </Text>
@@ -58,7 +62,7 @@ export default function WeatherAlertModal({ visible, alert, onReroute, onStayOnR
             <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(alert.severity) }]}>
               <Text style={styles.severityText}>{alert.severity} Alert</Text>
             </View>
-          </View>
+          </ScrollView>
 
           {/* Action Buttons */}
           <View style={styles.actions}>
@@ -101,6 +105,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     width: "100%",
     maxWidth: 400,
+    maxHeight: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -125,8 +130,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600"
   },
-  content: {
-    marginBottom: spacing.xl
+  scrollContainer: {
+    maxHeight: 300,
+    marginBottom: spacing.lg
+  },
+  scrollContent: {
+    paddingVertical: spacing.xs
   },
   message: {
     ...type.body,
