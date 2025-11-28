@@ -234,17 +234,43 @@ export default function ActiveNavigationScreen({ navigation, route }) {
       });
 
       if (directionsResponse.success && directionsResponse.routes.length > 0) {
+        // Helper to calculate arrival time
+        const calculateArrivalTime = (durationInSeconds) => {
+          const now = new Date();
+          const arrival = new Date(now.getTime() + durationInSeconds * 1000);
+          return arrival.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        };
+
         const transformedRoutes = directionsResponse.routes.map((route, index) => ({
           id: index,
           polyline: decodePolyline(route.overview_polyline),
-          steps: route.legs[0].steps,
+          steps: route.legs[0].steps.map(step => ({
+            html_instructions: step.instruction || step.html_instructions || 'Continue straight',
+            distance: step.distance,
+            duration: step.duration,
+            maneuver: step.maneuver || 'straight',
+            start_location: step.start_location,
+            end_location: step.end_location
+          })),
           distance: route.legs[0].distance.text,
           duration: route.legs[0].duration.text,
+          arrivalTime: calculateArrivalTime(route.legs[0].duration.value),
           startLocation: route.legs[0].start_location,
-          endLocation: route.legs[0].end_location
+          endLocation: route.legs[0].end_location,
+          description: `Alternative route - ${route.summary || 'avoiding weather alerts'}`
         }));
 
         setRecalculatedRoutes(transformedRoutes);
+        setCurrentStepIndex(0);
+
+        // Immediately check for alerts on the new route
+        setTimeout(() => {
+          checkLocationForAlerts();
+        }, 500);
       }
     } catch (error) {
       console.error('Error recalculating route:', error);
