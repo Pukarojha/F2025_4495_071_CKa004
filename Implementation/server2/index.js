@@ -135,7 +135,7 @@ app.post('/alerts/search', async (req, res) => {
       cache.set('all-alerts', alerts);
     }
 
-    // Debug: Log geometry types
+    // Debug: Log geometry types and sample alerts
     const geometryTypes = {};
     alerts.forEach(alert => {
       const type = alert.geometry?.type || 'null';
@@ -143,17 +143,52 @@ app.post('/alerts/search', async (req, res) => {
     });
     console.log('[API] Alert geometry types:', geometryTypes);
 
-    // Filter alerts that affect the given coordinates
+    // Log sample alerts to understand the data structure
+    if (alerts.length > 0) {
+      console.log('[API] Sample alert with null geometry:', {
+        event: alerts[0].event,
+        severity: alerts[0].severity,
+        areaDesc: alerts[0].areaDesc,
+        hasGeometry: !!alerts[0].geometry
+      });
+    }
+
+    // Since many alerts have null geometry, use a hybrid approach:
+    // 1. Try geometry-based matching first
+    // 2. Fallback to state-based matching using areaDesc
+
+    // Extract unique states from route
+    const routeStates = new Set();
+    coordinates.forEach(coord => {
+      const [lat, lon] = coord;
+      const state = getStateFromCoordinates(lat, lon);
+      if (state) routeStates.add(state);
+    });
+    console.log('[API] Route passes through states:', Array.from(routeStates));
+
     const relevantAlerts = alerts.filter(alert => {
-      if (!alert.geometry || !alert.geometry.coordinates) {
-        return false;
+      // Try geometry-based matching first
+      if (alert.geometry && alert.geometry.coordinates) {
+        const geometryMatch = coordinates.some(coord => {
+          const [lat, lon] = coord;
+          return isPointInAlertGeometry(lat, lon, alert.geometry);
+        });
+        if (geometryMatch) return true;
       }
 
-      // Check if any of the user's coordinates fall within the alert's geometry
-      return coordinates.some(coord => {
-        const [lat, lon] = coord;
-        return isPointInAlertGeometry(lat, lon, alert.geometry);
-      });
+      // Fallback: Match by states along the route
+      // Extract state codes from route coordinates
+      if (alert.areaDesc) {
+        const matched = coordinates.some(coord => {
+          const [lat, lon] = coord;
+          const state = getStateFromCoordinates(lat, lon);
+          // Check if alert's area description contains the state
+          return state && alert.areaDesc.includes(state);
+        });
+        return matched;
+      }
+
+      return false;
     });
 
     console.log(`[API] Found ${relevantAlerts.length} relevant alerts`);
@@ -228,6 +263,27 @@ app.get('/alerts/:state', async (req, res) => {
 });
 
 /**
+ * Get US state abbreviation from coordinates
+ * This is a simplified approach using rough lat/lon boundaries
+ */
+function getStateFromCoordinates(lat, lon) {
+  // Simplified state boundaries for major states along common routes
+  // Washington
+  if (lat >= 45.5 && lat <= 49 && lon >= -124.7 && lon <= -116.9) return 'WA';
+  // Oregon
+  if (lat >= 42 && lat <= 46.3 && lon >= -124.5 && lon <= -116.5) return 'OR';
+  // California
+  if (lat >= 32.5 && lat <= 42 && lon >= -124.4 && lon <= -114.1) return 'CA';
+  // Illinois
+  if (lat >= 37 && lat <= 42.5 && lon >= -91.5 && lon <= -87.5) return 'IL';
+  // New York
+  if (lat >= 40.5 && lat <= 45 && lon >= -79.8 && lon <= -71.9) return 'NY';
+
+  // Add more states as needed
+  return null;
+}
+
+/**
  * Helper function to check if a point is within an alert's geometry
  * Supports Polygon, MultiPolygon, and handles missing geometry
  */
@@ -251,15 +307,16 @@ function isPointInAlertGeometry(lat, lon, geometry) {
 }
 
 /**
- * Check if a point is within a polygon using bounding box
+ * Check if a point is within or near a polygon using expanded bounding box
  * coords is an array of [longitude, latitude] pairs
+ * Expands the bounding box by ~50 miles (~0.75 degrees) to catch nearby alerts
  */
 function checkPointInPolygon(lat, lon, coords) {
   if (!coords || coords.length === 0) {
     return false;
   }
 
-  // Bounding box check
+  // Bounding box check with buffer zone
   let minLat = Infinity, maxLat = -Infinity;
   let minLon = Infinity, maxLon = -Infinity;
 
@@ -269,6 +326,13 @@ function checkPointInPolygon(lat, lon, coords) {
     minLon = Math.min(minLon, lng);
     maxLon = Math.max(maxLon, lng);
   });
+
+  // Expand bounding box by ~50 miles (~0.75 degrees latitude/longitude)
+  const buffer = 0.75;
+  minLat -= buffer;
+  maxLat += buffer;
+  minLon -= buffer;
+  maxLon += buffer;
 
   return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
 }
