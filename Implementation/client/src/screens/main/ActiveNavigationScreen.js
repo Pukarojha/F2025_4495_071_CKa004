@@ -21,6 +21,7 @@ export default function ActiveNavigationScreen({ navigation, route }) {
   const [recalculatedRoutes, setRecalculatedRoutes] = useState(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
+  const [activeRouteIndex, setActiveRouteIndex] = useState(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: 43.6532,
     longitude: -79.3832,
@@ -35,7 +36,9 @@ export default function ActiveNavigationScreen({ navigation, route }) {
 
   // Use recalculated routes if available, otherwise use original routes
   const activeRoutes = recalculatedRoutes || routes;
-  const currentRoute = activeRoutes?.[selectedRoute];
+  // Use activeRouteIndex if set (after rerouting), otherwise use selectedRoute from params
+  const currentRouteIndex = activeRouteIndex !== null ? activeRouteIndex : selectedRoute;
+  const currentRoute = activeRoutes?.[currentRouteIndex];
   const steps = currentRoute?.steps || [];
   const currentStep = steps[currentStepIndex];
 
@@ -90,12 +93,13 @@ export default function ActiveNavigationScreen({ navigation, route }) {
     if (!currentRoute?.polyline || currentRoute.polyline.length === 0) return;
 
     try {
-      const upcomingCoords = currentRoute.polyline
-        .slice(0, Math.min(50, currentRoute.polyline.length))
-        .filter((_, index) => index % 5 === 0)
+      // Check the entire route for alerts, sampling every 10th coordinate
+      // This ensures we detect alerts along the full route, not just the beginning
+      const routeCoords = currentRoute.polyline
+        .filter((_, index) => index % 10 === 0)
         .map(coord => [coord.latitude, coord.longitude]);
 
-      const alerts = await api.getAlertsForRoute(upcomingCoords);
+      const alerts = await api.getAlertsForRoute(routeCoords);
       setWeatherAlerts(alerts);
 
       // Show modal for ANY alert (Extreme, Severe, Moderate, Minor) during navigation
@@ -265,6 +269,13 @@ export default function ActiveNavigationScreen({ navigation, route }) {
         }));
 
         setRecalculatedRoutes(transformedRoutes);
+
+        // Switch to the next available route (cycle through alternatives)
+        // If we're on route 0 and there are alternatives, switch to route 1, etc.
+        const nextRouteIndex = transformedRoutes.length > 1
+          ? (currentRouteIndex + 1) % transformedRoutes.length
+          : 0;
+        setActiveRouteIndex(nextRouteIndex);
         setCurrentStepIndex(0);
 
         // Immediately check for alerts on the new route
